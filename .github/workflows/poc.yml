@@ -78,7 +78,12 @@ jobs:
           touch "$HOME/previous-job"
           printf 'macOS guest runner: %s\n' "$RUNNER_NAME"
           sw_vers
-          system_profiler SPHardwareDataType | head -14
+          system_profiler SPHardwareDataType -detailLevel mini
+          printf 'int main(void) { return 0; }\n' > "$RUNNER_TEMP/poc.c"
+          xcrun clang "$RUNNER_TEMP/poc.c" -o "$RUNNER_TEMP/poc"
+          codesign --force --sign - "$RUNNER_TEMP/poc"
+          codesign --verify --strict "$RUNNER_TEMP/poc"
+          "$RUNNER_TEMP/poc"
 
   macos-fresh:
     needs: macos-first

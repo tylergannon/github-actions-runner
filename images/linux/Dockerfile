@@ -9,9 +9,11 @@ ENV PATH="/usr/local/go/bin:/opt/vite-plus/bin:${PATH}" \
     VP_HOME=/opt/vite-plus \
     GOMODCACHE=/cache/go-mod \
     GOCACHE=/cache/go-build \
-    npm_config_store_dir=/cache/pnpm
+    PNPM_CONFIG_STORE_DIR=/cache/pnpm/store \
+    PNPM_CONFIG_CACHE_DIR=/cache/pnpm/metadata
 RUN curl -fsSL https://vite.plus -o /tmp/install-vp.sh \
     && VP_NODE_MANAGER=no VP_PM_MANAGER=yes bash /tmp/install-vp.sh \
     && rm /tmp/install-vp.sh \
     && chown -R runner:runner /opt/vite-plus
 USER runner
+RUN vp env default pnpm@12 && vp env install pnpm@12
