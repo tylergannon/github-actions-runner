@@ -15,17 +15,18 @@ been performed. The previous external-drive choice was expressly rejected;
 the usable macOS base image is now on the internal disk.
 
 - Private repository: https://github.com/tylergannon/github-actions-runner
-- Draft PR: https://github.com/tylergannon/github-actions-runner/pull/1
-- Root checkout: `/Users/tyler/src/github-actions-runner` (still `main`, initial commit).
-- Actual worktree: `/Users/tyler/src/.worktrees/github-actions-runner-design`.
-- Branch: `codex/service-design`.
+- Initial PoC PR: https://github.com/tylergannon/github-actions-runner/pull/1
+- Repository and continuation directory: `/Users/tyler/src/github-actions-runner`.
+- Branch: `main`, as explicitly requested by the user after this handoff.
 - Latest implementation commit before this handoff: `5b6093e2f10277ed831c3a6c33ede15b05653161`.
 - Original chat: `01a16587-fd0a-7600-bdb9-a9ba1f3033ab`, titled
   **Locate runner directories and runsvc**.
 
-The root checkout has an identical local copy of this handoff for discovery;
-the committed copy and implementation live on the worktree branch. Do not
-mistake the empty root `main` checkout for the implementation being missing.
+The user requested keeping this simple: the requirements, handoff and PoC
+implementation belong together on `main` in the repository directory above.
+The initial `codex/service-design` worktree is retired after merging. Start the
+new project/session in the repository directory; no separate worktree is needed
+to locate the implementation.
 
 ## Requirements and decisions from the conversation
 
@@ -164,6 +165,10 @@ corrected. Later user corrections take precedence over earlier suggestions.
 29. Follow the existing workflow: worktree for implementation; no `docs/`
     writes without permission; meaningful worklog; native, directly runnable
     tooling. No new document/ledger machinery is needed beyond this requested handoff.
+30. **Put this initial project on `main` and keep the continuation simple.**
+    The user explicitly requested this after discovering that the root checkout
+    still looked empty. Do not leave the new session pointing at an empty main
+    checkout or require it to find an old worktree to read the implementation.
 
 ## Current implementation choices (provisional, not all user requirements)
 
@@ -321,12 +326,12 @@ Remaining material gaps before production adoption:
 
 ## Continuing from the new session
 
-Start in the implementation worktree, read this file plus `CURRENT.md`, and
+Start in the repository directory on `main`, read this file plus `CURRENT.md`, and
 verify state before starting anything. `DESIGN.md` and the old README contain
 earlier proposals; this handoff records the later user corrections and PoC facts.
 
 ```sh
-cd /Users/tyler/src/.worktrees/github-actions-runner-design
+cd /Users/tyler/src/github-actions-runner
 git status --short
 just --list
 just storage-macos
@@ -348,17 +353,17 @@ automatic operation later, deliberately re-enable the two services and
 
 The workflow is `.github/workflows/poc.yml`. It runs on PR changes to that
 workflow, `hosts/**`, `images/linux/**` and `examples/cache-demo/**`.
-`workflow_dispatch` cannot be used until the workflow exists on default `main`.
-To retry the present implementation without manufacturing a source edit:
+The workflow is now available on default `main`, so it can be dispatched directly:
 
 ```sh
-gh run rerun 39869292924 --repo tylergannon/github-actions-runner
-gh run watch 39869292924 --repo tylergannon/github-actions-runner --exit-status
+gh workflow run poc.yml --repo tylergannon/github-actions-runner --ref main
+gh run list --repo tylergannon/github-actions-runner --limit 5
+# Watch the new run ID with gh run watch --exit-status.
 ```
 
-That run tests implementation SHA `5b6093e`; documentation-only commits do not
-change its runtime content. If implementation changes, test the new SHA. Keep
-the draft PR's proof claims accurate; do not merge merely because Linux is green.
+The earlier run IDs remain historical proof, not proof of the current main SHA.
+If implementation changes, test the new SHA. Merging this initial PoC at the
+user's request does not establish production readiness or close the gaps above.
 
 Build/repackage recipes are in `justfile`: `build-manager` builds unchanged
 upstream source for darwin/arm64 and linux/amd64; `build-macos-app IDENTITY`
