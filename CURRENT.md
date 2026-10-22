@@ -153,6 +153,36 @@ The qualification job owns deciding which evidence to retain after an
 attempt. Runner infrastructure owns shared cache budgets and workspace
 lifecycle. Moving unit files alone addresses neither accumulation source.
 
+## Authorized media-migration cleanup
+
+On 2026-10-22 the user authorized removal of obsolete migration copies from
+Bob's internal disk. The checked staging mount `/mnt/media-staging` was empty
+and the external 2 TB staging SSD was not attached. A media-file scan of
+accessible `/home/tyler`, `/srv` and `/mnt` on the internal filesystem found
+no video/ISO files over 100 MiB. The live library is on `/dev/sda1` mounted
+at `/srv/media`, separate from Bob's internal filesystem.
+
+The internal migration directory did contain these obsolete artifacts:
+
+| Removed path under `~/.local/state/torrentgrab/migration-20261010/` | Allocated bytes reported by `du` |
+| --- | ---: |
+| `jellyfin-restore-check/` | 8,632,045,568 |
+| `jellyfin-backup-20261010151935.zip` | 4,177,420,288 |
+| `jellyfin-cold-20261010.tar.partial` | 1,577,951,232 |
+
+The duplicate ZIP was SHA-256 matched against the preserved backup in
+`/srv/media/ServerState`. The interrupted TAR was matched against the prefix
+of the complete preserved cold archive. Docker inspection found only the
+stopped `jellyfin-migration-check` container referencing these test artifacts;
+that exact container was removed before the artifacts. No global pruning
+was performed.
+
+The migration directory fell to about 14 MiB while its live Compose
+configuration remained. After filesystem accounting settled, internal-disk
+available space rose from about 573 GiB to 587 GiB. The complete backup ZIP
+and 8 GiB cold archive remain on the media disk. Both Jellyfin and Transmission
+user services remained active; Jellyfin returned HTTP 200 from `/health`.
+
 ## Inspection boundaries
 
 The GitHub API confirmed the three Mac registrations online and idle earlier

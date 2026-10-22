@@ -1,23 +1,23 @@
-# GitHub Actions Runner
+# GitHub Actions Runner infrastructure
 
-One home for the GitHub Actions runner infrastructure on Amritanandamayi
-(macOS) and Bob (Linux).
+One home for our runner configuration on Amritanandamayi (macOS) and Bob
+(Linux): recognizable native OS services, established runner implementations,
+and explicit, bounded storage.
 
-The operating system must identify and control it as **GitHub Actions
-Runner**. A compiled `github-actions-runner` executable and native service
-definitions provide that identity. Projects own their build commands; this
-repository owns runner installation, host definitions, lifecycle and shared
-build tools.
+**Status: design proposal.** Existing runners have not been migrated.
 
-**Status: design proposal.** No service implementation or migration has been
-installed. Existing runners continue unchanged.
+The proposed Linux baseline is an existing Docker runner's documented
+systemd/ephemeral-container setup. Evaluate existing macOS VM runner managers
+before writing native lifecycle code. This repository defines our installation
+and storage policy; a custom cross-platform runner supervisor is not planned.
 
-- [Service and installation design](DESIGN.md)
-- [Observed installations and their current owners](CURRENT.md)
+One CI storage root contains job workspaces, a few useful cache mounts
+(initially Go modules, Go build output and the package store), and deliberately
+retained artifacts. Worker images share installed tool layers. Node is requested
+as `24`; patch releases are normal maintenance.
 
-Node policy is `24`, shared across projects. Patch releases are routine tool
-maintenance, not edits to every application's workflow.
+- [Design, reuse assessment and storage requirements](DESIGN.md)
+- [Observed installations and disk usage](CURRENT.md)
 
-Deployment is complete only when the installed service is recognizable in
-macOS System Settings or systemd, receives a real GitHub job, and responds
-correctly to the operating system's lifecycle controls.
+Acceptance includes real jobs, native OS identity/lifecycle and demonstrated
+storage reuse, cleanup and budgets.
