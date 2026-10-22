@@ -117,6 +117,42 @@ deletion list. They exclude other potentially relevant storage, including
 Docker image/layer storage and the shared Go module directory. Cleanup needs
 an ownership and retention decision before removal.
 
+### Follow-up disk breakdown
+
+Read-only follow-up on the same day found:
+
+- Of the 57 GiB qualification runner tree, about 55 GiB is
+  `.local/qualification/` in the evaluator checkout. There are 26 attempt
+  directories: 22 have state `completed`, one `failed`, and three have no
+  readable `attempt.json`.
+- Agent delivery directories total 41.38 GiB, almost entirely retained agent
+  homes (40.76 GiB). Across those homes, Playwright browser caches total
+  15.28 GiB, Go build caches 11.11 GiB, package-manager caches 7.22 GiB,
+  `go/` trees 3.79 GiB, and `.local/` trees 3.30 GiB. These categories include
+  nested paths and must not be added to their parent totals again.
+- Other attempt subdirectories total 6.03 GiB of frozen applications,
+  4.47 GiB of assessment Go caches, 1.04 GiB of prepared tools, 0.77 GiB of
+  source checkouts and 0.55 GiB of output. This is an aggregation of named
+  subdirectories, not an exhaustive accounting of top-level files.
+- The qualification workflow uses `actions/checkout` with `clean: false`.
+  Its run script gives each attempt an agent home under `delivery/.home`.
+  Cleanup removes attempt containers and authentication but retains the
+  attempt directory. A frozen source archive excludes application build
+  dependencies; this does not remove the original agent home and its caches.
+- skgo's shared Go build cache is about 37 GiB of its 41 GiB tree. Gimbal's
+  shared Go build cache is about 6.6 GiB of its 15 GiB tree. Gimbal also has
+  2.3 GiB of Lightpanda-related tools/cache, about 1.35 GiB across two runner
+  update staging directories, frontend tooling, and browser caches.
+- Outside those three host trees, Docker reports roughly 29.7 GB, 31.1 GB
+  and 33.2 GB in the writable layers of the three older skgo-project workers.
+  Sampling the largest found about 13 GiB of Go build cache, 8 GiB in `/tmp`,
+  plus Go modules, frontend tooling and browsers. Docker's decimal layer
+  sizes and `du`'s binary directory sizes are different measurements.
+
+The qualification job owns deciding which evidence to retain after an
+attempt. Runner infrastructure owns shared cache budgets and workspace
+lifecycle. Moving unit files alone addresses neither accumulation source.
+
 ## Inspection boundaries
 
 The GitHub API confirmed the three Mac registrations online and idle earlier

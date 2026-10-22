@@ -7,3 +7,5 @@ discovery: Bob has eleven runner containers plus one native qualification runner
 decision: Preserve Ubuntu container compatibility on Arch Bob while proposing one native systemd service per instance and one host restart authority. Existing user-manager lingering is enabled.
 correction: Tool duplication and bundled runner Node are different concerns; Docker image layers also share storage. Do not equate worker count with copies of every runtime byte.
 discovery: Bob's native qualification runner tree reports 57 GiB, skgo cache tree 41 GiB and Gimbal cache tree 15 GiB. These aggregate observations need itemization before any reclamation claim or deletion.
+discovery: Follow-up attributed 40.76 GiB to retained per-attempt agent homes, including 15.28 GiB Playwright, 11.11 GiB Go build cache and 7.22 GiB package-manager cache across 26 attempts. Cleanup removes containers/auth, not these sandboxes; checkout clean=false preserves them.
+decision: Keep evidence retention in the qualification job's ownership and shared cache budgets in runner infrastructure. Renaming/installing native services alone will not repair disk accumulation.
