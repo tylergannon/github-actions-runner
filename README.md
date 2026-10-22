@@ -4,13 +4,17 @@ One home for our runner configuration on Amritanandamayi (macOS) and Bob
 (Linux): recognizable native OS services, established runner implementations,
 and explicit, bounded storage.
 
-**Status: design proposal.** Existing runners have not been migrated.
+**Start with [HANDOFF.md](HANDOFF.md).** It records the conversation's requirements,
+accepted decisions, installed PoC state, proof links, remaining gaps and restart
+commands. Linux jobs and cache reuse passed; macOS VM jobs are still pending.
+The PoC is stopped for handoff. Existing runners have not been migrated.
 
-The proposed Linux baseline is an existing Docker runner's documented
-systemd/ephemeral-container setup. The accepted macOS approach is one disposable
-VM per job; evaluate existing VM runner managers before writing native
-lifecycle code. This repository defines our installation
-and storage policy; a custom cross-platform runner supervisor is not planned.
+The PoC packages an unchanged existing manager, runscaler, over Docker and
+Tart, with systemd units on Bob and an Apple ServiceManagement registration
+bridge on macOS. The accepted macOS approach is one disposable VM per job.
+This repository owns installation and storage policy; a custom cross-platform
+runner supervisor is not planned. Mac runtime storage is internal, under
+`~/CI/github-actions-runner/`.
 
 One CI storage root contains job workspaces, a few useful cache mounts
 (initially Go modules, Go build output and the package store), and deliberately

@@ -4,6 +4,11 @@
 pending alignment and a measured migration. [CURRENT.md](CURRENT.md) is the
 separate factual inventory.
 
+**Continuation:** [HANDOFF.md](HANDOFF.md) records the later decisions and
+actual PoC. In particular, it supersedes the earlier direct-Docker implementation
+recommendation below with the runscaler evaluation, requires internal Mac storage
+at `~/CI/github-actions-runner/`, and distinguishes proved behavior from gaps.
+
 ## Desired state
 
 This repository defines how our GitHub Actions runners are installed, named,
@@ -26,9 +31,10 @@ repository for configuration does not require a new runner product.
 | Disposable macOS environments | [Tart](https://github.com/openai/tart) with an existing runner manager such as [Tartelet](https://github.com/framna-dk/tartelet) | Evaluate before writing a macOS manager; repository scope, signing, host compatibility and OS-visible identity need qualification |
 
 This is a researched recommendation, not a claim that any replacement has
-been installed or qualified. Tartelet's documented flow uses organization
-registrations, whereas our inspected repositories are personal-account
-repositories. Do not assume that it fits without verifying that boundary.
+been production-qualified. Tartelet's current configuration documentation supports
+personal repositories as well as organizations; the older org-oriented README
+does not establish an incompatibility. Its GitHub App prerequisite and the
+runscaler PoC selection are recorded in the handoff.
 
 GitHub's own documentation supports ephemeral runners that receive one job.
 Deregistering a runner alone does not remove a persistent mounted workspace.
