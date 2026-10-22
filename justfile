@@ -55,7 +55,7 @@ vms-macos:
 stop-macos:
     '/Users/tyler/Applications/GitHub Actions Runner.app/Contents/MacOS/github-actions-runner-service' unregister
 
-# Drain and re-register through ServiceManagement after configuration changes.
+# Re-register through ServiceManagement after configuration changes; use when idle.
 restart-macos: stop-macos start-macos
 
 start-macos:

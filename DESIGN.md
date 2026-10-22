@@ -1,13 +1,9 @@
 # Runner infrastructure: standard components, owned storage
 
-**Design proposal, revised 2026-10-22.** Existing runners remain unchanged
-pending alignment and a measured migration. [CURRENT.md](CURRENT.md) is the
-separate factual inventory.
-
-**Continuation:** [HANDOFF.md](HANDOFF.md) records the later decisions and
-actual PoC. In particular, it supersedes the earlier direct-Docker implementation
-recommendation below with the runscaler evaluation, requires internal Mac storage
-at `~/CI/github-actions-runner/`, and distinguishes proved behavior from gaps.
+**Accepted requirements and PoC choices, revised 2026-10-22.** Existing production
+runners remain unchanged pending qualification and measured migration.
+[CURRENT.md](CURRENT.md) is the separate dated inventory;
+[OPERATIONS.md](OPERATIONS.md) records installation, evidence and remaining gaps.
 
 ## Desired state
 
@@ -21,20 +17,26 @@ Use established runner implementations and native OS units. The earlier
 proposal to build a new cross-platform service adapter is withdrawn. A new
 repository for configuration does not require a new runner product.
 
-## Existing implementations and the proposed choice
+## Existing implementations and the selected PoC
 
 | Component | Established implementation | Fit here |
 | --- | --- | --- |
-| Single-host Linux workers | [myoung34/docker-github-actions-runner](https://github.com/myoung34/docker-github-actions-runner/wiki/Usage#systemd) | Recommended starting point for Bob; documents the exact systemd plus ephemeral Docker pattern |
+| Single-host Linux workers | [myoung34/docker-github-actions-runner](https://github.com/myoung34/docker-github-actions-runner/wiki/Usage#systemd) | Considered alternative; documents systemd plus ephemeral Docker |
 | Kubernetes fleet | [GitHub Actions Runner Controller](https://docs.github.com/en/actions/concepts/runners/actions-runner-controller) | Established full controller; no reason yet to add a Kubernetes cluster for this host |
 | Scale-set SDK | [actions/scaleset](https://github.com/actions/scaleset) | Building block for custom controllers; its Docker example expressly says it is not production-ready, so it is not a turnkey answer |
-| Disposable macOS environments | [Tart](https://github.com/openai/tart) with an existing runner manager such as [Tartelet](https://github.com/framna-dk/tartelet) | Evaluate before writing a macOS manager; repository scope, signing, host compatibility and OS-visible identity need qualification |
+| Disposable macOS environments | [Tart](https://github.com/openai/tart) with an existing runner manager such as [Tartelet](https://github.com/framna-dk/tartelet) | Tart is selected; Tartelet remains an alternative existing manager |
 
-This is a researched recommendation, not a claim that any replacement has
-been production-qualified. Tartelet's current configuration documentation supports
-personal repositories as well as organizations; the older org-oriented README
-does not establish an incompatibility. Its GitHub App prerequisite and the
-runscaler PoC selection are recorded in the handoff.
+The PoC packages unchanged [ysya/runscaler](https://github.com/ysya/runscaler)
+at the revision in `components.toml`, using its Docker and Tart providers.
+It uses GitHub's scale-set SDK and supports this personal-account repository.
+This is an evaluated dependency, not a claim of production maturity. The only
+new native service code is a small Swift SMAppService registration bridge;
+it does not supervise runners. App metadata, an icon and Developer ID signing
+provide the installed identity **GitHub Actions Runner**.
+
+Tartelet supports personal repositories as well as organizations; its GitHub
+App prerequisite made it less convenient for the isolated PoC. That is a
+configuration tradeoff, not a categorical incompatibility.
 
 GitHub's own documentation supports ephemeral runners that receive one job.
 Deregistering a runner alone does not remove a persistent mounted workspace.
@@ -43,13 +45,12 @@ The OS unit and storage lifecycle must dispose of the owned execution data.
 ## One storage root, several straightforward cache mounts
 
 All host-visible job data and caches live beneath one declared CI storage
-root. For Bob, propose `/srv/github-actions-runner`, provisioned on a
-size-controlled filesystem or subvolume. This path is a proposal, not an
-existing mount. Do not make a subdirectory per incidental HOME or tool
+root. The Bob PoC uses `/srv/github-actions-runner-poc`; a production
+root still needs an enforced filesystem budget. Do not make a subdirectory per incidental HOME or tool
 installer outside this root.
 
 ```text
-/srv/github-actions-runner/
+/srv/github-actions-runner-poc/
   config/                   installed non-secret instance definitions
   secrets/                  restricted registration credentials
   jobs/<instance>/<job>/    independent workspaces and temporary agent homes
@@ -89,23 +90,22 @@ alongside the CI bind-mount root; use scoped image/build-cache ownership and
 budgets. A dedicated engine/storage domain can be a later decision if strict
 physical containment requires it.
 
-On macOS, use one declared CI data root too. Native application bundles,
+On macOS, runtime data must use the internal disk under
+`/Users/tyler/CI/github-actions-runner/`. External backup volumes are excluded.
+Make room internally before growing images; do not move CI to external storage. Native application bundles,
 ServiceManagement registration and OS-managed logs remain in their standard
 OS locations. Those are named installation metadata, not permission for jobs
 to create random host HOME trees.
 
-## Bob: systemd starts standard container workers
+## Bob: systemd starts the existing manager
 
-Use the documented upstream pattern: a native systemd unit executes
-`docker run --rm` in the foreground, with `EPHEMERAL=1`. The runner accepts
-one job, exits, and systemd starts a fresh container. Docker's independent
-restart policy is disabled. `systemctl stop` keeps the service stopped.
-
-Use a recognizable template such as `github-actions-runner@.service`, with
-instance descriptions identifying the repository and slot. The unit directly
-executes `/usr/bin/docker`; it does not invoke a new Go supervisor or a homegrown
-shell restart loop. Journald captures the service's output. Instance metadata
-links its OS unit, container, GitHub registration, source revision and paths.
+The native `github-actions-runner-poc.service` runs the installed manager from
+`/srv/github-actions-runner-poc/bin`, independent of a developer checkout. The
+manager starts disposable Ubuntu containers with one job each. Docker has no
+independent restart policy for those workers; systemd owns manager restart.
+The loopback-only registry is a separate dependency unit. Capacity is currently
+zero idle workers and at most one active worker, limited to 2 CPUs, 4096 MiB
+and 1024 processes. This does not prescribe the final production fleet size.
 
 Bob's existing user manager has `Linger=yes`, so user units are a legitimate
 boot-start option without requiring interactive login. System units with an
@@ -142,7 +142,7 @@ Docker Desktop on a Mac runs Linux containers. It does not provide macOS,
 Xcode, Apple's signing tools or Darwin runtime tests. Those jobs run inside
 the chosen macOS VMs. Linux jobs belong on Bob.
 
-Evaluate existing Tart-based VM managers first. A disposable VM can provide
+Use the existing runscaler Tart provider in the PoC. A disposable VM can provide
 the same fresh-environment property as a disposable Linux container. Its base
 images, clones and caches need a visible storage root and budget too; moving
 unbounded state into VM images does not satisfy the storage requirement.
@@ -155,7 +155,7 @@ If an existing manager meets these requirements, retain its legitimate app
 identity and document its purpose. Only a demonstrated attribution gap would
 justify a minimal native packaging bridge around the supported runner.
 
-Select an existing manager by verifying personal-repository routing, the
+Qualify the selected manager by verifying personal-repository routing, the
 current host OS, real signing jobs, startup, stop, cleanup and update behavior.
 This is implementation qualification of the accepted VM approach. Do not
 build a custom macOS controller while that reuse evaluation is unfinished.
@@ -198,8 +198,8 @@ image/tool maintenance, not edits to every project's workflow. Keep Vite+ as
 the frontend command surface. Avoid overlapping installers for the same tool.
 
 Preinstalled compilers and build Node can live in the worker image: Docker
-shares image layers among workers. On native hosts, reuse the existing shared
-tool manager. GitHub's bundled Node is part of its runner distribution and
+shares image layers among workers. On macOS, put shared tools in the maintained VM base image.
+The PoC currently uses Go `1.27`; no exact common Go patch is prescribed. GitHub's bundled Node is part of its runner distribution and
 remains intact. Record resolved tool versions for jobs without turning those
 observations into automatic patch pins.
 
