@@ -32,9 +32,9 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>StandardErrorPath</key>
-	<string>/Users/tyler/CI/github-actions-runner/poc/logs/stderr.log</string>
+	<string>/dev/null</string>
 	<key>StandardOutPath</key>
-	<string>/Users/tyler/CI/github-actions-runner/poc/logs/stdout.log</string>
+	<string>/dev/null</string>
 	<key>ThrottleInterval</key>
 	<integer>10</integer>
 	<key>WorkingDirectory</key>

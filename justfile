@@ -17,6 +17,8 @@ build-macos-app identity:
     cp '{{root}}/platforms/macos/Info.plist' '{{root}}/build/GitHub Actions Runner.app/Contents/Info.plist'
     cp '{{root}}/platforms/macos/com.tylergannon.github-actions-runner.poc.plist' '{{root}}/build/GitHub Actions Runner.app/Contents/Library/LaunchAgents/'
     cp '{{root}}/ephemeral/reference/runscaler/LICENSE' '{{root}}/build/GitHub Actions Runner.app/Contents/Resources/runscaler-LICENSE'
+    swift '{{root}}/platforms/macos/MakeIcon.swift' '{{root}}/build/RunnerIcon.iconset'
+    iconutil --convert icns '{{root}}/build/RunnerIcon.iconset' --output '{{root}}/build/GitHub Actions Runner.app/Contents/Resources/RunnerIcon.icns'
     swiftc -parse-as-library -O -target arm64-apple-macosx13.0 '{{root}}/platforms/macos/ServiceRegistration.swift' -o '{{root}}/build/GitHub Actions Runner.app/Contents/MacOS/github-actions-runner-service'
     codesign --force --options runtime --timestamp --sign '{{identity}}' '{{root}}/build/GitHub Actions Runner.app/Contents/MacOS/github-actions-runner'
     codesign --force --options runtime --timestamp --sign '{{identity}}' '{{root}}/build/GitHub Actions Runner.app'
@@ -52,6 +54,9 @@ vms-macos:
 
 stop-macos:
     '/Users/tyler/Applications/GitHub Actions Runner.app/Contents/MacOS/github-actions-runner-service' unregister
+
+# Drain and re-register through ServiceManagement after configuration changes.
+restart-macos: stop-macos start-macos
 
 start-macos:
     '/Users/tyler/Applications/GitHub Actions Runner.app/Contents/MacOS/github-actions-runner-service' register

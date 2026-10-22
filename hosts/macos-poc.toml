@@ -8,6 +8,7 @@ max-runners = 1
 min-runners = 0
 concurrent = 1
 health-port = 18089
+log-file = "/Users/tyler/CI/github-actions-runner/poc/logs/runner.log"
 drain-timeout = "2m"
 
 [disk]
