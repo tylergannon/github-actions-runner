@@ -13,5 +13,5 @@ ENV PATH="/usr/local/go/bin:/opt/vite-plus/bin:${PATH}" \
 RUN curl -fsSL https://vite.plus -o /tmp/install-vp.sh \
     && VP_NODE_MANAGER=no VP_PM_MANAGER=yes bash /tmp/install-vp.sh \
     && rm /tmp/install-vp.sh \
-    && chmod -R a+rX /opt/vite-plus
+    && chown -R runner:runner /opt/vite-plus
 USER runner

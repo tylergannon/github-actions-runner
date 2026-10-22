@@ -1,6 +1,8 @@
 [Unit]
 Description=GitHub Actions Runner - Bob proof of concept
 After=default.target
+Requires=github-actions-runner-poc-registry.service
+After=github-actions-runner-poc-registry.service
 
 [Service]
 Type=exec

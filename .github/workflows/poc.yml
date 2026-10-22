@@ -5,6 +5,8 @@ on:
     paths:
       - .github/workflows/poc.yml
       - examples/cache-demo/**
+      - images/linux/**
+      - hosts/**
   workflow_dispatch:
 
 permissions:
