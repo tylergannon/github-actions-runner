@@ -1,0 +1,26 @@
+url = "https://github.com/OWNER/REPOSITORY"
+name = "github-actions-runner-poc-macos"
+token = "env:RUNNER_TOKEN"
+provider = "tart"
+runner-image = "github-actions-runner-poc-base"
+labels = ["github-actions-runner-poc-macos"]
+max-runners = 1
+min-runners = 0
+concurrent = 1
+health-port = 18089
+log-file = "/Users/runner/CI/github-actions-runner/poc/logs/runner.log"
+drain-timeout = "2m"
+
+[disk]
+guard = false
+
+[tart]
+home = "/Users/runner/CI/github-actions-runner/tart"
+runner-dir = "/Users/admin/actions-runner"
+cpu = 4
+memory = 4096
+pool-size = 0
+cache-cleanup = true
+cache-max-age = "168h"
+cache-budget = 8
+cache-cleanup-interval = "6h"

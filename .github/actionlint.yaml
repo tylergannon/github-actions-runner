@@ -1,0 +1,4 @@
+self-hosted-runner:
+  labels:
+    - github-actions-runner-poc-linux
+    - github-actions-runner-poc-macos

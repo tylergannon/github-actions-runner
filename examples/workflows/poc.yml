@@ -1,0 +1,140 @@
+name: Runner proof of concept
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Success proof, deliberate job failure, or a job to cancel
+        type: choice
+        options: [proof, failure, cancellation]
+        default: proof
+
+permissions:
+  contents: read
+
+jobs:
+  linux-populate:
+    if: inputs.scenario == 'proof'
+    runs-on: github-actions-runner-poc-linux
+    timeout-minutes: 15
+    outputs:
+      runner: ${{ steps.identity.outputs.runner }}
+    steps:
+      - id: identity
+        run: printf 'runner=%s\n' "$RUNNER_NAME" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+      - name: Populate the declared caches
+        working-directory: examples/cache-demo
+        env:
+          PROOF_RUN: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = Linux
+          test "$(node -p 'process.versions.node.split(".")[0]')" = 24
+          test "$(go env GOMODCACHE)" = /cache/go-mod
+          test "$(go env GOCACHE)" = /cache/go-build
+          test ! -e "$HOME/previous-job"
+          go mod download
+          test "$(go run .)" = 00c00816-c4a2-4af1-bebe-50d9df07ce9c
+          vp install
+          node -e "if (!require('is-number')(42)) process.exit(1)"
+          for cache in /cache/go-mod /cache/go-build /cache/pnpm; do
+            printf '%s\n' "$PROOF_RUN" > "$cache/poc-run"
+          done
+          touch "$HOME/previous-job"
+          printf 'Runner: %s\n' "$RUNNER_NAME"
+          go version
+          node --version
+          du -sh /cache/*
+
+  linux-reuse:
+    needs: linux-populate
+    runs-on: github-actions-runner-poc-linux
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Reuse caches from a fresh container, offline
+        working-directory: examples/cache-demo
+        env:
+          PROOF_RUN: ${{ github.run_id }}
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          PREVIOUS_RUNNER: ${{ needs.linux-populate.outputs.runner }}
+        run: |
+          set -euo pipefail
+          test ! -e "$HOME/previous-job"
+          test "$RUNNER_NAME" != "$PREVIOUS_RUNNER"
+          for cache in /cache/go-mod /cache/go-build /cache/pnpm; do
+            test "$(cat "$cache/poc-run")" = "$PROOF_RUN"
+          done
+          go mod download
+          test "$(go run .)" = 00c00816-c4a2-4af1-bebe-50d9df07ce9c
+          vp install --offline
+          node -e "if (!require('is-number')(42)) process.exit(1)"
+          printf 'Fresh runner reused all three caches: %s\n' "$RUNNER_NAME"
+
+  macos-first:
+    if: inputs.scenario == 'proof'
+    runs-on: github-actions-runner-poc-macos
+    timeout-minutes: 20
+    outputs:
+      runner: ${{ steps.identity.outputs.runner }}
+    steps:
+      - id: identity
+        run: printf 'runner=%s\n' "$RUNNER_NAME" >> "$GITHUB_OUTPUT"
+      - name: Exercise the disposable macOS guest
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = Darwin
+          test "$(node -p 'process.versions.node.split(".")[0]')" = 24
+          test ! -e "$HOME/previous-job"
+          touch "$HOME/previous-job"
+          printf 'macOS guest runner: %s\n' "$RUNNER_NAME"
+          sw_vers
+          printf 'int main(void) { return 0; }\n' > "$RUNNER_TEMP/poc.c"
+          xcrun clang "$RUNNER_TEMP/poc.c" -o "$RUNNER_TEMP/poc"
+          codesign --force --sign - "$RUNNER_TEMP/poc"
+          codesign --verify --strict "$RUNNER_TEMP/poc"
+          "$RUNNER_TEMP/poc"
+          # Keep the runner alive through the manager's startup observation window.
+          # The pinned upstream otherwise mistakes a very short completed job for
+          # a startup failure, even when GitHub reports success.
+          sleep 10
+
+  macos-fresh:
+    needs: macos-first
+    runs-on: github-actions-runner-poc-macos
+    timeout-minutes: 20
+    steps:
+      - name: Check that the next VM has no previous job state
+        env:
+          PREVIOUS_RUNNER: ${{ needs.macos-first.outputs.runner }}
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = Darwin
+          test ! -e "$HOME/previous-job"
+          test "$RUNNER_NAME" != "$PREVIOUS_RUNNER"
+          printf 'Fresh macOS guest runner: %s\n' "$RUNNER_NAME"
+          sw_vers
+          sleep 10
+
+  lifecycle:
+    if: github.event_name == 'workflow_dispatch' && inputs.scenario != 'proof'
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [github-actions-runner-poc-linux, github-actions-runner-poc-macos]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    steps:
+      - name: Exercise failure or wait for explicit workflow cancellation
+        env:
+          SCENARIO: ${{ inputs.scenario }}
+        run: |
+          set -euo pipefail
+          printf 'Lifecycle scenario=%s runner=%s platform=%s\n' "$SCENARIO" "$RUNNER_NAME" "$(uname -s)"
+          touch "$HOME/previous-job"
+          # Allow the manager to observe runner startup before deliberate failure.
+          sleep 15
+          if [ "$SCENARIO" = failure ]; then exit 1; fi
+          sleep 300
