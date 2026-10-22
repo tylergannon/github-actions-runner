@@ -24,7 +24,6 @@ repository for configuration does not require a new runner product.
 | Kubernetes fleet | [GitHub Actions Runner Controller](https://docs.github.com/en/actions/concepts/runners/actions-runner-controller) | Established full controller; no reason yet to add a Kubernetes cluster for this host |
 | Scale-set SDK | [actions/scaleset](https://github.com/actions/scaleset) | Building block for custom controllers; its Docker example expressly says it is not production-ready, so it is not a turnkey answer |
 | Disposable macOS environments | [Tart](https://github.com/openai/tart) with an existing runner manager such as [Tartelet](https://github.com/framna-dk/tartelet) | Evaluate before writing a macOS manager; repository scope, signing, host compatibility and OS-visible identity need qualification |
-| Mac runner without a VM | [GitHub's runner service](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/configure-the-application) | Supported fallback for macOS-only jobs; still needs deliberate storage ownership and recognizable native attribution |
 
 This is a researched recommendation, not a claim that any replacement has
 been installed or qualified. Tartelet's documented flow uses organization
@@ -126,11 +125,16 @@ and memory limits to the actual containers. ARM64 remains an explicitly
 emulated execution profile, with its named binfmt prerequisite owned here.
 Preserve workflow labels and existing repository scopes during migration.
 
-## macOS: macOS jobs require a macOS execution environment
+## macOS: one disposable VM per job
+
+**Accepted by the user on 2026-10-22:** macOS CI jobs run in disposable macOS
+VMs. Each job receives a fresh clone of a maintained base image. After the job
+finishes, export its selected artifacts and diagnostics, stop the VM, and
+delete the clone. Application CI jobs do not run directly on the host.
 
 Docker Desktop on a Mac runs Linux containers. It does not provide macOS,
-Xcode, Apple's signing tools or Darwin runtime tests. Those jobs must run on
-macOS, directly or inside a macOS VM. Linux jobs belong on Bob.
+Xcode, Apple's signing tools or Darwin runtime tests. Those jobs run inside
+the chosen macOS VMs. Linux jobs belong on Bob.
 
 Evaluate existing Tart-based VM managers first. A disposable VM can provide
 the same fresh-environment property as a disposable Linux container. Its base
@@ -145,10 +149,13 @@ If an existing manager meets these requirements, retain its legitimate app
 identity and document its purpose. Only a demonstrated attribution gap would
 justify a minimal native packaging bridge around the supported runner.
 
-The exact macOS manager remains an open selection. Verify personal-repository
-routing, the current host OS, real signing jobs, startup, stop, cleanup and
-update behavior before adopting one. Do not build a custom macOS controller
-while that reuse evaluation is unfinished.
+Select an existing manager by verifying personal-repository routing, the
+current host OS, real signing jobs, startup, stop, cleanup and update behavior.
+This is implementation qualification of the accepted VM approach. Do not
+build a custom macOS controller while that reuse evaluation is unfinished.
+Keep signing credentials out of the reusable base image; provision them for
+the signing job. Share only the declared, bounded caches, then verify clone
+deletion after success, failure and cancellation.
 
 ## Bounded storage is an acceptance requirement
 

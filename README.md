@@ -7,8 +7,9 @@ and explicit, bounded storage.
 **Status: design proposal.** Existing runners have not been migrated.
 
 The proposed Linux baseline is an existing Docker runner's documented
-systemd/ephemeral-container setup. Evaluate existing macOS VM runner managers
-before writing native lifecycle code. This repository defines our installation
+systemd/ephemeral-container setup. The accepted macOS approach is one disposable
+VM per job; evaluate existing VM runner managers before writing native
+lifecycle code. This repository defines our installation
 and storage policy; a custom cross-platform runner supervisor is not planned.
 
 One CI storage root contains job workspaces, a few useful cache mounts
