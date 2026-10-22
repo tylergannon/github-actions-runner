@@ -1,0 +1,99 @@
+name: Runner proof of concept
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/poc.yml
+      - examples/cache-demo/**
+      - images/linux/**
+      - hosts/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-populate:
+    runs-on: github-actions-runner-poc-bob
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Populate the declared caches
+        working-directory: examples/cache-demo
+        env:
+          PROOF_RUN: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = Linux
+          test "$(node -p 'process.versions.node.split(".")[0]')" = 24
+          test "$(go env GOMODCACHE)" = /cache/go-mod
+          test "$(go env GOCACHE)" = /cache/go-build
+          test ! -e "$HOME/previous-job"
+          go mod download
+          test "$(go run .)" = 00c00816-c4a2-4af1-bebe-50d9df07ce9c
+          vp install
+          node -e "if (!require('is-number')(42)) process.exit(1)"
+          for cache in /cache/go-mod /cache/go-build /cache/pnpm; do
+            printf '%s\n' "$PROOF_RUN" > "$cache/poc-run"
+          done
+          touch "$HOME/previous-job"
+          printf 'Runner: %s\n' "$RUNNER_NAME"
+          go version
+          node --version
+          du -sh /cache/*
+
+  linux-reuse:
+    needs: linux-populate
+    runs-on: github-actions-runner-poc-bob
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Reuse caches from a fresh container, offline
+        working-directory: examples/cache-demo
+        env:
+          PROOF_RUN: ${{ github.run_id }}
+          GOPROXY: "off"
+          GOSUMDB: "off"
+        run: |
+          set -euo pipefail
+          test ! -e "$HOME/previous-job"
+          for cache in /cache/go-mod /cache/go-build /cache/pnpm; do
+            test "$(cat "$cache/poc-run")" = "$PROOF_RUN"
+          done
+          go mod download
+          test "$(go run .)" = 00c00816-c4a2-4af1-bebe-50d9df07ce9c
+          vp install --offline
+          node -e "if (!require('is-number')(42)) process.exit(1)"
+          printf 'Fresh runner reused all three caches: %s\n' "$RUNNER_NAME"
+
+  macos-first:
+    runs-on: github-actions-runner-poc-macos
+    timeout-minutes: 20
+    steps:
+      - name: Exercise the disposable macOS guest
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = Darwin
+          test ! -e "$HOME/previous-job"
+          touch "$HOME/previous-job"
+          printf 'macOS guest runner: %s\n' "$RUNNER_NAME"
+          sw_vers
+          system_profiler SPHardwareDataType -detailLevel mini
+          printf 'int main(void) { return 0; }\n' > "$RUNNER_TEMP/poc.c"
+          xcrun clang "$RUNNER_TEMP/poc.c" -o "$RUNNER_TEMP/poc"
+          codesign --force --sign - "$RUNNER_TEMP/poc"
+          codesign --verify --strict "$RUNNER_TEMP/poc"
+          "$RUNNER_TEMP/poc"
+
+  macos-fresh:
+    needs: macos-first
+    runs-on: github-actions-runner-poc-macos
+    timeout-minutes: 20
+    steps:
+      - name: Check that the next VM has no previous job state
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = Darwin
+          test ! -e "$HOME/previous-job"
+          printf 'Fresh macOS guest runner: %s\n' "$RUNNER_NAME"
+          sw_vers

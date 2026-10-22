@@ -1,0 +1,15 @@
+[Unit]
+Description=GitHub Actions Runner - reset the three PoC caches
+Conflicts=github-actions-runner-poc.service
+After=github-actions-runner-poc.service
+Requires=github-actions-runner-poc-registry.service
+After=github-actions-runner-poc-registry.service
+OnSuccess=github-actions-runner-poc.service
+OnFailure=github-actions-runner-poc.service
+
+[Service]
+Type=oneshot
+# systemd drains and stops the runner before this command can touch its caches.
+# Only these three owned volumes are mounted; no host-wide Docker pruning.
+ExecStart=/usr/bin/docker run --rm --name github-actions-runner-poc-cache-cleanup --network none --user 0 --entrypoint /usr/bin/find --mount type=volume,source=github-actions-runner-poc-go-mod,target=/cache/go-mod --mount type=volume,source=github-actions-runner-poc-go-build,target=/cache/go-build --mount type=volume,source=github-actions-runner-poc-pnpm,target=/cache/pnpm localhost:15000/github-actions-runner-poc:local /cache/go-mod /cache/go-build /cache/pnpm -mindepth 1 -delete
+TimeoutStartSec=10min
