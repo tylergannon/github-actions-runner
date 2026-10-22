@@ -1,0 +1,18 @@
+[Unit]
+Description=GitHub Actions Runner - Bob proof of concept
+After=default.target
+
+[Service]
+Type=exec
+WorkingDirectory=/srv/github-actions-runner-poc
+EnvironmentFile=/srv/github-actions-runner-poc/secrets/service.env
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/srv/github-actions-runner-poc/bin/github-actions-runner run --config /srv/github-actions-runner-poc/config/runner.toml
+Restart=on-failure
+RestartSec=10s
+TimeoutStopSec=150s
+KillMode=control-group
+SyslogIdentifier=github-actions-runner-poc
+
+[Install]
+WantedBy=default.target
