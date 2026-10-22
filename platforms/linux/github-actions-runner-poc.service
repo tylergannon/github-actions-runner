@@ -12,7 +12,7 @@ Environment=PATH=/usr/local/bin:/usr/bin:/bin
 ExecStart=/srv/github-actions-runner-poc/bin/github-actions-runner run --config /srv/github-actions-runner-poc/config/runner.toml
 Restart=on-failure
 RestartSec=10s
-TimeoutStopSec=150s
+TimeoutStopSec=1900s
 KillMode=control-group
 SyslogIdentifier=github-actions-runner-poc
 

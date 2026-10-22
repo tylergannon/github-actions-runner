@@ -14,10 +14,12 @@ drain-timeout = "2m"
 guard = false
 
 [tart]
-home = "/Volumes/Laptop Backups/GitHub Actions Runner/tart"
+home = "/Users/tyler/CI/github-actions-runner/tart"
 runner-dir = "/Users/admin/actions-runner"
 cpu = 4
 memory = 4096
 pool-size = 0
-cache-budget = 45
+cache-cleanup = true
+cache-max-age = "168h"
+cache-budget = 8
 cache-cleanup-interval = "6h"
