@@ -38,5 +38,6 @@
     "native/private-evaluator/_diag/*.log"
   ],
   "log_days": 14,
+  "protected_paths": ["tools"],
   "drain_seconds": 5400
 }

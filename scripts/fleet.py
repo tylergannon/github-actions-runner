@@ -154,9 +154,27 @@ def cache_paths(config, root):
         for match in glob.glob(str(root / pattern)):
             path = owned(root, str(Path(match).relative_to(root)))
             if path.is_dir():
+                protect_installations(config, root, path)
                 paths.append(path)
     unique = set(paths)
     return sorted(p for p in unique if not any(parent in unique for parent in p.parents))
+
+
+def protect_installations(config, root, path):
+    """Installed software is permanent, even when GitHub calls it a tool cache."""
+    protected = ["bin", "config", "secrets", "tools", "images", "registry", "tart/vms"]
+    protected += config.get("protected_paths", [])
+    if config.get("manager_config"):
+        protected.append(config["manager_config"])
+    for native in config.get("native", []):
+        for suffix in [".runner", ".credentials", ".credentials_rsaparams", "bin", "externals",
+                       "run.sh", "runsvc.sh", "_work/_tool"]:
+            protected.append(str(Path(native["directory"]) / suffix))
+    candidate = path.resolve()
+    for relative in protected:
+        installation = owned(root, relative).resolve()
+        if candidate == installation or candidate in installation.parents or installation in candidate.parents:
+            raise ValueError(f"cleanup overlaps installed software or configuration: {path.relative_to(root)} ({relative})")
 
 
 def clear_caches(config, root):
@@ -181,6 +199,7 @@ def clear_caches(config, root):
         owned(root, pattern)
         for match in glob.glob(str(root / pattern)):
             path = owned(root, str(Path(match).relative_to(root)))
+            protect_installations(config, root, path)
             if path.is_file() and path.stat().st_mtime < before:
                 path.unlink()
             elif path.is_file() and path.stat().st_size > config.get("max_log_bytes", 10 * 1024 * 1024):
@@ -195,6 +214,13 @@ def clear_caches(config, root):
 
 def prune_owned_images(config):
     removed = []
+    keep = set(config.get("protected_images", []))
+    if config.get("cleanup_image"):
+        keep.add(config["cleanup_image"])
+    if config.get("manager_config"):
+        import tomllib
+        manager = tomllib.loads(owned(Path(config["root"]).resolve(), config["manager_config"]).read_text())
+        keep.update(s["runner-image"] for s in [manager] + manager.get("scaleset", []) if s.get("runner-image"))
     for policy in config.get("image_retention", []):
         prefix = policy["repository_prefix"]
         if not prefix or prefix == "*":
@@ -206,6 +232,8 @@ def prune_owned_images(config):
             if not entry["Repository"].startswith(prefix) or entry["Tag"] == "<none>":
                 continue
             reference = entry["Repository"] + ":" + entry["Tag"]
+            if reference in keep:
+                continue
             created = run(["docker", "image", "inspect", reference, "--format", "{{.Created}}"]).stdout.strip()
             if datetime.datetime.fromisoformat(created.replace("Z", "+00:00")).timestamp() < before:
                 # Remove only this owned tag. Never force-remove running images
@@ -254,6 +282,8 @@ def maintain_host(config):
     with (root / "maintenance.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         try:
+            # Reject unsafe cleanup policy before changing routing or stopping jobs.
+            cache_paths(config, root)
             # Remove the routing labels first, so existing jobs can finish and
             # current workflows cannot dispatch new work during cache reset.
             for native in config.get("native", []):

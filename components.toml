@@ -10,4 +10,4 @@ archive_sha256 = "e680a734febccfce7d4e910c1f7f13fc3b00f19a181c945e2d746de3214c32
 
 [tools]
 node = "24"
-go = "1.27"
+go = "1.27.3"

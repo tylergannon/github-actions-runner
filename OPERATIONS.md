@@ -1,5 +1,57 @@
 # Build and configure
 
+Required software persists; ordinary workers may scale to zero. Go 1.27.3 is
+the current baseline. Use `go-version: stable` in `actions/setup-go` rather than
+`go-version-file`: the latter installs the module's minimum version, even when
+a newer compatible compiler is already installed. A module's `go` line remains
+its compatibility minimum and does not need to change for this runner update.
+
+## Provision tools once
+
+Install verified releases in GitHub's tool-cache layout during provisioning:
+
+```sh
+python3 scripts/provision-tools.py --tool-cache CI_ROOT/tools/actions --go 1.27.3 --node 24.22.1
+```
+
+For Linux, bind the `github-actions-runner-tools` volume to that directory and
+mount it at `/home/runner/_work/_tool`, as in the configuration examples. Provision
+both `--os linux --arch x64` and `--os linux --arch arm64` when both architectures
+are used. The cache layout separates installed binaries by architecture. Set
+ownership to container uid 1001. This is a permanent software store, despite the
+upstream mount setting being named `docker.cache`; never include it in weekly
+`cache_paths` or configure a wipe budget for it.
+
+For a Mac base, stop job admission and wait for existing jobs, boot the
+unregistered base, run the same script with the base runner's `_work/_tool`
+directory, verify versions and absence of `.runner`, stop the base, then resume
+the manager. For native runners, provision their `_work/_tool` directly while
+idle. Re-running the script reuses complete installations; archives are checked
+against upstream SHA-256 checksums before extraction.
+
+Other installed tools must also live in protected storage. For example, use
+architecture-specific volumes backed by `CI_ROOT/tools/mise-x64` and
+`CI_ROOT/tools/browsers-x64` for mise installations and Playwright browsers.
+Use separate ARM64 stores for tools whose layouts do not distinguish architecture.
+Dependency caches and build output remain under `CI_ROOT/caches`. Update prepared
+software deliberately to current stable versions; do not bootstrap the machine
+inside every workflow.
+
+Before mounting a bind-backed Vite+ store over `/opt/vite-plus`, seed the empty
+store from that directory in the prepared image. Otherwise an empty bind mount
+hides the image's installation. Keep Vite+ stores per project when projects
+select different active versions. Preinstall the tools declared by each
+project's mise configuration into its mise store; Mac-base provisioning must
+include those tools too, such as Zig and XcodeGen for native-shell workloads.
+Setup actions should report reuse on successive jobs.
+
+Cleanup refuses paths overlapping `bin`, `config`, `secrets`, `tools`, `images`,
+the image registry, local VMs and native runner installations/tool caches.
+Additional permanent data can be declared in `protected_paths`. Declare native
+workspace, `_temp` and `_actions` cleanup separately; never clear `_work` as a
+whole when it contains `_tool`. Configured worker images and the cleanup image
+are also excluded from image-retention deletion.
+
 These are deployment examples, not a record of a particular machine. Replace
 `OWNER/REPOSITORY` and the `/Users/runner` host path before deployment. The
 public infrastructure repository has no active self-hosted workflow. Register

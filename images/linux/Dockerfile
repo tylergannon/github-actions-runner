@@ -1,4 +1,4 @@
-FROM golang:1.27-bookworm AS go
+FROM golang:1.27.3-bookworm AS go
 FROM node:24-bookworm AS node
 FROM ghcr.io/actions/actions-runner:2.338.1
 

@@ -21,7 +21,14 @@ workers. Do not add a competing Docker restart policy or shell restart loop.
 Native start, stop, enable/disable, update and startup behavior must be verified.
 A stop must handle real children, and recovery must reconcile owned leftovers.
 
-## Disposable execution
+## On-demand execution with persistent software
+
+Worker lifetime and software lifetime are separate. Ordinary workers may be
+removed after a job and scale to zero, while installed tools remain in reusable
+images, base VMs or protected tool stores. Jobs must reuse those installations.
+Current stable Go is the policy, starting with 1.27.3; module minimums do not
+force selection of an older compiler. Weekly cleanup never deletes tool caches,
+current prepared environments, runner installations or configuration.
 
 Linux jobs use Ubuntu-based disposable Docker containers, with explicit CPU,
 memory and process limits. macOS jobs use fresh disposable Tart macOS VMs on
@@ -63,7 +70,7 @@ filesystem limits, cache tools and native scheduled cleanup over a new controlle
 Request Node as `24` and record resolved versions in diagnostics. Routine patch
 upgrades should not require editing every application workflow. Keep GitHub's
 bundled Node runtimes, which execute JavaScript Actions independently of build
-Node. The Linux example uses Go `1.27`; this is not an exact shared patch policy.
+Node. Go `1.27.3` is the current prepared baseline; workflows select stable.
 Use `vp install`, `vp run`, `vp exec` and `vp dlx` for frontend work.
 
 Container layers and cloned VM bases share installed tools. Avoid unexplained

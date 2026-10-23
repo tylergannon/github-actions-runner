@@ -16,6 +16,7 @@ drain-timeout = "100m"
 guard = false
 
 [docker]
+cache-volumes = ["github-actions-runner-vp:/opt/vite-plus", "github-actions-runner-mise:/home/runner/.local/share/mise", "github-actions-runner-browsers:/home/runner/.cache/ms-playwright"]
 socket = "/var/run/docker.sock"
 dind = false
 memory = 8192
@@ -41,3 +42,9 @@ name = "github-actions-runner-poc-pnpm"
 path = "/cache/pnpm"
 budget = "1GB"
 on-exceed = "warn"
+
+# Permanent software store; bind this volume to CI_ROOT/tools/actions.
+# The upstream mount schema calls this a cache, but weekly cleanup must not clear it.
+[[docker.cache]]
+name = "github-actions-runner-tools"
+path = "/home/runner/_work/_tool"

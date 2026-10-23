@@ -23,6 +23,10 @@ jobs:
       - id: identity
         run: printf 'runner=%s\n' "$RUNNER_NAME" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: false
       - name: Populate the declared caches
         working-directory: examples/cache-demo
         env:
@@ -53,6 +57,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: false
       - name: Reuse caches from a fresh container, offline
         working-directory: examples/cache-demo
         env:
@@ -82,6 +90,10 @@ jobs:
     steps:
       - id: identity
         run: printf 'runner=%s\n' "$RUNNER_NAME" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: false
       - name: Exercise the disposable macOS guest
         run: |
           set -euo pipefail
@@ -91,6 +103,7 @@ jobs:
           touch "$HOME/previous-job"
           printf 'macOS guest runner: %s\n' "$RUNNER_NAME"
           sw_vers
+          go version
           printf 'int main(void) { return 0; }\n' > "$RUNNER_TEMP/poc.c"
           xcrun clang "$RUNNER_TEMP/poc.c" -o "$RUNNER_TEMP/poc"
           codesign --force --sign - "$RUNNER_TEMP/poc"
@@ -106,6 +119,10 @@ jobs:
     runs-on: github-actions-runner-poc-macos
     timeout-minutes: 20
     steps:
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: false
       - name: Check that the next VM has no previous job state
         env:
           PREVIOUS_RUNNER: ${{ needs.macos-first.outputs.runner }}

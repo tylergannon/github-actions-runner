@@ -35,6 +35,35 @@ class MaintenanceTests(unittest.TestCase):
         fleet.clear_caches(self.config, self.root)
         self.assertEqual((self.root / "evidence/report.json").read_text(), "private proof")
 
+    def test_cleanup_rejects_installed_tools_including_parent_work_directory(self):
+        tool = self.root / "native/example/_work/_tool/go/1.27.3/x64/bin/go"
+        tool.parent.mkdir(parents=True)
+        tool.write_text("installed compiler")
+        self.config["native"] = [{"directory": "native/example"}]
+        for relative in ["native/example/_work", "native/example/_work/_tool", "native/example/_work/*"]:
+            with self.subTest(relative=relative):
+                self.config["cache_paths"] = [relative]
+                result = fleet.maintain_host(self.config)
+                self.assertFalse(result["ok"])
+                self.assertIn("installed software", result["error"])
+                self.assertEqual(tool.read_text(), "installed compiler")
+
+    def test_cleanup_preserves_tools_while_removing_job_data(self):
+        tool = self.root / "tools/actions/go/1.27.3/x64/bin/go"
+        tool.parent.mkdir(parents=True)
+        tool.write_text("installed compiler")
+        self.assertTrue(fleet.maintain_host(self.config)["ok"])
+        self.assertEqual(tool.read_text(), "installed compiler")
+        self.config["cache_paths"] = ["tools/*"]
+        self.assertFalse(fleet.maintain_host(self.config)["ok"])
+
+    def test_image_retention_keeps_configured_worker_and_cleanup_images(self):
+        self.config.update(image_retention=[{"repository_prefix": "runner-", "days": 1}],
+                           cleanup_image="runner-current:local")
+        with patch.object(fleet, "run", return_value=SimpleNamespace(stdout='{"Repository":"runner-current","Tag":"local"}\n')) as command:
+            self.assertEqual(fleet.prune_owned_images(self.config), [])
+            self.assertEqual(command.call_count, 1)
+
     def test_drain_and_resume_routing_even_when_cleanup_fails(self):
         directory = self.root / "native/example"
         directory.mkdir(parents=True)
