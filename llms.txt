@@ -1,0 +1,121 @@
+# GitHub Actions Runner
+
+> Projects supply their execution environments. This setup starts them on demand,
+> connects them to GitHub Actions, limits capacity, and cleans disposable data.
+> Installed software survives jobs and weekly cleanup.
+
+## Use a project-owned image
+
+Keep the Dockerfile and image build in the consuming project's repository.
+Publish a versioned image tag to a registry the runner host can pull from.
+A Dockerfile in this infrastructure repository is optional.
+
+For Linux, extend the shared image or provide a compatible GitHub Actions runner
+image. The deployed shared images on Bob are
+`localhost:15000/github-actions-runner-poc:local` (x64) and `:arm64` (ARM64).
+That loopback registry is reachable on Bob; builds using it run on Bob.
+A project-owned registry is also supported; arrange pull access without baking
+credentials or runner registration into the image.
+
+Install required software when building the image. Preserve the runner startup
+contract, architecture, runner-owned work directory and configured mount paths.
+The current Linux image runs as uid 1001. Prepare writable mount parents before
+switching to the runner user. Extending the shared image is the simplest way to
+retain its setup; see [the Dockerfile](images/linux/Dockerfile).
+
+For macOS, supply a project-specific prepared Tart base VM instead of a Docker
+image. Keep its runner unregistered, with required software installed. Clone a
+shared base before changing it. Native release/private runners retain their
+existing execution and credential boundaries.
+
+## Connect it to this project's jobs
+
+Match the project's repository URL, scale-set name and architecture in the
+installed manager configuration. Change only its `[[scaleset]]` `runner-image`
+to the published image tag or Tart base name, before `[scaleset.docker]`:
+
+```toml
+[[scaleset]]
+# Preserve this entry's existing URL, name, labels and capacity.
+runner-image = "REGISTRY/PROJECT-runner:VERSION"
+```
+
+This is a fragment for an existing entry, not a complete new scale set.
+Workflows select that entry's existing name with `runs-on`. Preserve other scale
+sets, shared image tags, services, routing, capacity and security boundaries.
+If the project needs different mounts, scope them to its scale set.
+
+Configuration changes require a manager restart after existing jobs finish.
+Use the installed service and its graceful drain; never kill active jobs.
+Retain the previous image selection for rollback. Run an existing project job
+and confirm that it starts and reuses its installed tools. Application test
+failures belong to the project; they do not authorize unrelated application fixes.
+
+## Storage contract for weekly cleanup
+
+Ordinary containers and VM clones are disposable. Keep required software in the
+image/base VM, or a permanent tool store. Put accumulating data in declared
+cleanup locations below the host's CI root.
+
+| Data | Location and cleanup behavior |
+| --- | --- |
+| Installed software | Image/base VM or `CI_ROOT/tools/PROJECT/`; preserved |
+| GitHub setup-action tool installations | `_work/_tool`; preserved |
+| Dependency downloads and build caches | `CI_ROOT/caches/PROJECT/`; declare in host `cache_paths` |
+| Persistent job output and temporary files | Declare exact disposable paths in `cache_paths` |
+| Expiring logs | Declare `log_paths` and retention in the host manifest |
+| Reports/journals that must survive | Separate from caches; declare `protected_paths` |
+
+Existing Linux mounts include `/cache/go-mod`, `/cache/go-build`, `/cache/pnpm`,
+`/home/runner/_work/_tool`, and tool stores for Vite+, mise and browsers. Inspect
+the project's effective mounts: a volume hides software at the same image path.
+Seed a new permanent store once, or change only the project's mount so it uses
+its image's installation. Never wipe a shared store to activate an image update.
+Keep installed software out of cache wipe budgets even when a mount is called
+`docker.cache`. Dependency caches may refill after cleanup; toolchains must remain.
+
+For every new persistent mount, record its host path and retention in the host
+manifest. Use project-specific stores when versions or settings could affect
+other projects. Cleanup clears the contents of declared cache directories, so
+never declare a tool directory, retained-evidence directory, or their parent as
+a cache. The operator rejects overlaps with protected installations.
+
+For old project image tags, add an explicit project-only `image_retention`
+repository prefix and retention days in the host manifest. Configured worker
+image tags are protected automatically; use `protected_images` for additional
+rollback tags. Host image cleanup does not garbage-collect registry blobs:
+configure retention in the project's registry separately. Bob's loopback registry
+has no automatic blob cleanup in this operator. Never globally prune Docker,
+volumes, registries or Tart VMs. Keep prepared Mac bases and remove only owned,
+disposable job data through the existing maintenance policy.
+
+## Installed fleet and operation
+
+- Infrastructure checkout: `/Users/tyler/src/github-actions-runner`.
+- Linux host: `ssh bob`; CI root `/srv/github-actions-runner-poc`;
+  manager configuration `config/runner.toml` relative to that root.
+- Mac CI root: `/Users/tyler/CI/github-actions-runner`;
+  manager configuration `poc/config/runner.private.toml` relative to that root.
+- Each host's `config/host.json` declares its services, storage and cleanup.
+  Inspect it for current paths; [examples](examples/host.json) are templates.
+- The signed **GitHub Actions Runner.app** owns macOS background identity.
+  Preserve the existing service registrations.
+
+From this Mac, inspect the whole fleet with:
+
+```sh
+/opt/homebrew/bin/python3 /Users/tyler/CI/github-actions-runner/bin/fleet.py /Users/tyler/CI/github-actions-runner/config/fleet.json status
+```
+
+The scheduled weekly task runs the same operator with `maintain` instead of
+`status`. It drains jobs, cleans declared disposable data, and restores services
+and routing. Use that existing task; image updates do not need another scheduler
+or a fleet-wide cleanup. Keep private host configuration and credentials out of
+source control and job images.
+
+## Further detail
+
+- [Operations](OPERATIONS.md): provisioning, services, mounts and retention.
+- [Linux scale sets](examples/linux-fleet.toml): per-project image and mount settings.
+- [Mac scale sets](examples/macos-fleet.toml): prepared VM selection.
+- [Cleanup implementation](scripts/fleet.py): protected paths and retention rules.
