@@ -60,7 +60,11 @@ checks should use GitHub-hosted workers with external workflow approval retained
 
 ## Project-specific images
 
-A project can add `images/PROJECT/Dockerfile` here, extending the shared image:
+Projects can keep their Dockerfiles and image builds in their own repositories
+and publish to any registry the runner host can pull from. This repository only
+needs their image selection and storage configuration. See [llms.txt](llms.txt)
+for the agent integration and cleanup contract. Extending the shared image is
+optional; for example, a project can use `ci/runner.Dockerfile`:
 
 ```dockerfile
 FROM localhost:15000/github-actions-runner-poc:local
@@ -69,10 +73,11 @@ USER root
 USER runner
 ```
 
-Build on Bob and push to its local registry, using a distinct versioned tag:
+For the loopback registry, build from the project checkout on Bob and push a
+distinct versioned tag:
 
 ```sh
-docker build -t localhost:15000/github-actions-runner-PROJECT:VERSION -f images/PROJECT/Dockerfile .
+docker build -t localhost:15000/github-actions-runner-PROJECT:VERSION -f ci/runner.Dockerfile .
 docker push localhost:15000/github-actions-runner-PROJECT:VERSION
 ```
 

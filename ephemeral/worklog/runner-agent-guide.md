@@ -1,0 +1,2 @@
+correction: Projects may own and publish their runner images from their own repositories. A centralized Dockerfile location was an unnecessary convention, not a manager requirement.
+decision: llms.txt documents the existing image-selection and storage contract, including explicit cleanup declarations for new persistent data and the separate registry retention boundary. No runtime or application changes are needed for this documentation.

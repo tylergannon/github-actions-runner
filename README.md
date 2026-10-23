@@ -4,6 +4,9 @@ A centralized place to run our GitHub Actions jobs on Linux and macOS, with
 required software already installed, recognizable services and predictable
 storage cleanup.
 
+Agents: read [llms.txt](llms.txt) to use a project-owned image and preserve the
+weekly cleanup contract.
+
 [runscaler](https://github.com/ysya/runscaler) starts ordinary job containers or
 Mac VMs on demand, within explicit capacity limits, and removes them afterward.
 With no jobs, there are no ordinary workers running. Installed software stays in
@@ -60,9 +63,10 @@ routing and approval boundaries.
 
 ## Updating a project’s software
 
-Projects can contribute their own Dockerfile under `images/PROJECT/` in this
-repository. Extend the shared Linux image, install the project’s required tools
-at image-build time, and build/push a distinct project image tag. Set that
+Projects own their Dockerfiles and published runner images in their own
+repositories. They may extend the shared Linux image or provide a compatible
+runner image, with required tools installed at image-build time. A Dockerfile
+under `images/PROJECT/` here is optional. Set that
 project’s `[[scaleset]]` `runner-image` to the tag; macOS scale sets can likewise
 select their own prepared Tart base VM. Drain existing jobs before restarting
 the manager with changed configuration.
