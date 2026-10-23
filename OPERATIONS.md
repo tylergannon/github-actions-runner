@@ -58,7 +58,9 @@ manager lingering is required for operation without an interactive login.
 named service and timer. Verify the intended startup scope before enabling it.
 
 The Docker workers have no independent restart policy or host socket mount.
-CPU/memory/process limits are in the example TOML. Create the three named
+The example ceilings are four Linux workers and two Mac VMs, with zero idle
+workers. Set these explicitly for available host resources; CPU/memory/process
+limits apply separately to each worker. Create the three named
 local-driver volumes as bind mounts from the owned cache directories:
 
 | Host category | Worker mount | Policy |

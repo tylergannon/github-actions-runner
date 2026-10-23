@@ -4,9 +4,10 @@ token = "env:RUNNER_TOKEN"
 provider = "docker"
 runner-image = "localhost:15000/github-actions-runner-poc:local"
 labels = ["github-actions-runner-poc-linux"]
-max-runners = 1
+# Explicit host ceiling; size to available CPU and memory. Idle capacity stays zero.
+max-runners = 4
 min-runners = 0
-concurrent = 1
+concurrent = 4
 health-port = 18089
 log-file = "/srv/github-actions-runner-poc/logs/runner.log"
 drain-timeout = "30m"
