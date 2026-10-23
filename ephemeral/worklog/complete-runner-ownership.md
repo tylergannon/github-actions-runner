@@ -1,0 +1,5 @@
+correction: The user's delivery target includes every runner on both hosts, not only ordinary CI. Native Mac release, ARM64 Linux, and private qualification workers must be declared and operated by this project, with one scheduled fleet maintenance entry point.
+decision: Keep existing build/qualification order and native systemd/launchd ownership. Extend service packaging rather than writing another runner supervisor. Preserve private evaluator evidence outside disposable cache policy.
+friction: Worktree creation completed despite a subsequent unknown-operation status response; list_artifacts supplied the registered path.
+correction: A Python Program in an independently installed Mac LaunchAgent caused macOS to report Python as a background item. Mac native execution must be compiled, signed, embedded and registered through the owning app using SMAppService.
+friction: The manager removed a newly assigned worker during drain before its delayed JobStarted message arrived. Maintenance now checks GitHub active workflows and waits for a quiet period before stopping managers; affected task-owned checks were rerun.

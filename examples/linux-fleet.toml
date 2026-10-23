@@ -4,7 +4,7 @@ runner-image = "localhost:15000/github-actions-runner-poc:local"
 concurrent = 6
 health-port = 18089
 log-file = "/srv/github-actions-runner-poc/logs/runner.log"
-drain-timeout = "30m"
+drain-timeout = "100m"
 
 [disk]
 guard = false

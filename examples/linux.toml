@@ -10,7 +10,7 @@ min-runners = 0
 concurrent = 4
 health-port = 18089
 log-file = "/srv/github-actions-runner-poc/logs/runner.log"
-drain-timeout = "30m"
+drain-timeout = "100m"
 
 [disk]
 guard = false

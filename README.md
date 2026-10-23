@@ -1,83 +1,91 @@
 # GitHub Actions Runner infrastructure
 
-A centralized place to run our GitHub Actions jobs on self-hosted Linux and
-macOS machines. Runners stay ready between jobs, with the software they need
-already installed. Running a task should not require setting up the machine
-or reinstalling its tools every time.
+A centralized place to run our GitHub Actions jobs on Linux and macOS, with
+required software already installed, recognizable services and predictable
+storage cleanup.
 
-This README defines the intended behavior and repository scope. The current
-implementation still needs to be brought into alignment with it.
+[runscaler](https://github.com/ysya/runscaler) starts ordinary job containers or
+Mac VMs on demand, within explicit capacity limits, and removes them afterward.
+With no jobs, there are no ordinary workers running. Installed software stays in
+reusable container images and Mac base VMs. Starting a worker must not mean
+reinstalling its toolchain. Native release and private qualification runners
+remain in the same inventory where their workloads require persistent execution.
 
 ## Required behavior
 
-- **Persistent runners and software.** Keep runners, toolchains and required
-  shared software installed across jobs, restarts and weekly cleanup. Software
-  installation and updates are deliberate maintenance operations.
-- **Known execution locations.** Route our GitHub Actions jobs to an explicitly
-  configured runner pool. Runner names and labels should make it clear in GitHub
-  which machine runs each job.
-- **Proper operating-system identity.** Installed services and macOS background
-  items must be identified as **GitHub Actions Runner**, with recognizable names
-  for individual runners. An incidental script or interpreter name is not an
-  acceptable background-item identity.
-- **Bounded capacity.** Configure runner counts and concurrency explicitly so
-  the service cannot grow unchecked or take over the host. Preserve the capacity
-  needed by existing jobs when replacing runners.
-- **One obvious CI data location per host.** Keep runner configuration, state,
-  software and accumulating job data under a declared CI root, with permanent
-  installations separated from cleanup targets. Native app bundles and service
-  registrations use their normal OS locations and are documented.
-- **Regular, scoped cleanup.** Weekly maintenance removes accumulated caches,
-  old build output, temporary files and expired artifacts/logs. It preserves
-  installed software, runner registration and configuration, and avoids active
-  jobs and unrelated host data.
+- **Persistent software, on-demand workers.** Keep prepared environments and
+  required tools across jobs, restarts and weekly cleanup. Ordinary workers
+  scale to zero; the manager stays available to receive jobs.
+- **Current tools.** Use current stable releases. Go 1.27.3 is the current
+  migration baseline. Refresh prepared environments during maintenance, rather
+  than downloading toolchains in every task. Account for consuming workflows
+  that still request an older version before retiring that installation.
+- **Known execution locations.** Runner names and routing labels identify the
+  host and workload. One fleet inventory covers every managed runner.
+- **Proper OS identity.** Services and macOS background items belong to
+  **GitHub Actions Runner**, not an incidental script or interpreter.
+- **Bounded capacity.** Explicit runner counts, concurrency and resource limits
+  prevent unchecked expansion. Preserve the capacity existing jobs need.
+- **One CI data root per host.** Separate installed tools, configuration and
+  prepared environments from accumulating job data. Native app bundles and
+  service registrations use their documented OS locations. Account for
+  container-engine storage separately from bind-mounted CI data.
+- **Scoped weekly cleanup.** Remove accumulated caches, build output, temporary
+  files and expired logs/artifacts. Preserve tools, prepared environments,
+  registration, configuration and retained private evidence. Avoid active jobs
+  and unrelated host data.
 
-Clearing a cache may require the next job to refill it. It must not uninstall
-the tools needed to run that job. Per-job disposable containers or VMs are not
-a requirement.
+Clearing dependency caches can require a later job to refill them. It must not
+uninstall the software needed to run that job. Tool caches such as GitHub's
+`_work/_tool` contain installed software and are not weekly cleanup targets.
 
-## What this repository should contain
+## What belongs in this repository
 
-- Service installation and management for Linux and macOS, including correct
-  naming, automatic startup, status, stop and removal.
-- Repeatable provisioning and update instructions or scripts for the software
-  required by our jobs.
-- Runner configuration covering repository access, routing, names, capacity
-  and data locations.
-- A documented storage layout and cleanup rules that distinguish permanent
-  installations from accumulating data.
-- Operating instructions and checks that demonstrate real jobs work and the
-  installation remains usable after cleanup.
+- [Native services and the named Mac app](platforms/), with startup, status,
+  stop and removal support.
+- [Linux worker image](images/linux/Dockerfile) and repeatable tool provisioning
+  for Linux, Mac bases and native runners.
+- Runner configuration for access, routing, capacity and storage:
+  [Linux](examples/linux.toml), [macOS](examples/macos.toml),
+  [Linux fleet](examples/linux-fleet.toml), [Mac fleet](examples/macos-fleet.toml).
+- [Fleet](examples/fleet.json) and [host](examples/host.json) manifests, and
+  [one operator command](scripts/fleet.py) for status and weekly maintenance.
+- [Operating instructions](OPERATIONS.md), [design constraints](DESIGN.md) and
+  [qualification workflow](examples/workflows/poc.yml).
 
-Application repositories continue to own their workflows, build commands and
-tests. Credentials, private host configuration and execution evidence stay
-outside this public source repository.
+Application repositories own their workflows, build commands and tests.
+Credentials, machine-specific manifests and execution evidence stay outside
+this public repository. External fork jobs retain their existing GitHub-hosted
+routing and approval boundaries.
 
-## Current implementation and gaps
+## Storage and operation
 
-The existing proof of concept uses [runscaler](https://github.com/ysya/runscaler)
-to create disposable Linux Docker workers and macOS Tart VMs. It includes native
-service packaging, a Linux toolchain image, example configurations and a
-qualification workflow.
+| Keep installed | Eligible for cleanup |
+| --- | --- |
+| Manager and native runner installations | Completed-job workspaces and temporary files |
+| Toolchains and tool caches | Dependency downloads and rebuildable build caches |
+| Current worker images and Mac base VMs | Superseded images under an explicit retention policy |
+| Configuration, registration and credentials | Expired logs and artifacts |
+| Retained private reports and journals | Explicitly declared disposable data |
 
-That lifecycle does not yet meet the persistent-runner requirement. The Linux
-example preserves three shared caches but deletes their contents weekly; shared
-macOS caches are a documented gap. Existing design and operating documents
-describe that proof of concept and must be reconciled with the requirements
-above as implementation changes.
+Use the installed operator with the private fleet manifest:
 
-- [Existing design and component choices](DESIGN.md)
-- [Existing build and operating instructions](OPERATIONS.md)
-- [Linux image](images/linux/Dockerfile) and [native service packaging](platforms/)
-- Configuration examples: [Linux](examples/linux.toml), [macOS](examples/macos.toml),
-  [multiple Linux projects](examples/linux-fleet.toml),
-  [multiple macOS projects](examples/macos-fleet.toml)
-- [Existing qualification workflow](examples/workflows/poc.yml)
+```sh
+python3 CI_ROOT/bin/fleet.py CI_ROOT/config/fleet.json status
+python3 CI_ROOT/bin/fleet.py CI_ROOT/config/fleet.json maintain
+```
+
+The scheduled maintenance task covers every declared host. systemd and the
+signed Mac app own services; runscaler owns ordinary worker lifecycle. Native
+exceptions remain declared and visible. Docker's engine and supporting services
+can remain running when ordinary worker count is zero.
 
 ## Acceptance
 
-Run a real project workflow twice, perform the regular cleanup, then run it
-again. Required software and runner registration must survive, jobs must reuse
-the installed tools, and eligible accumulated data must be removed. Verify
-recognizable identities in GitHub and OS service/background-item settings,
-declared storage locations and bounded runner capacity.
+Run real workflows twice, perform weekly cleanup, then run them again. Verify
+that required tools are reused without reinstallation, eligible accumulated
+data is removed, retained data survives and ordinary workers return to zero.
+Check identities in GitHub and OS background settings, declared storage paths
+and capacity limits. Measure idle manager resource use separately from Docker
+and other supporting services. Passing an example alone does not establish
+that every consuming workflow has been migrated.
