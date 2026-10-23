@@ -73,6 +73,14 @@ class MaintenanceTests(unittest.TestCase):
             self.assertEqual(fleet.prune_owned_images(self.config), ["application-check-old:latest"])
         self.assertEqual([x for x in calls if x[2] == "rm"], [["docker", "image", "rm", "application-check-old:latest"]])
 
+    def test_waits_for_github_assignment_even_before_manager_reports_busy(self):
+        (self.root / "manager.toml").write_text('[[scaleset]]\nurl="https://github.com/owner/repo"\n')
+        self.config.update(manager_config="manager.toml", quiet_seconds=0)
+        with patch.object(fleet, "gh", side_effect=[{"workflow_runs": [{"id": 1}]}, {"workflow_runs": []}]) as api, patch.object(fleet.time, "sleep") as sleep:
+            fleet.wait_manager_idle(self.config, self.root)
+        self.assertEqual(api.call_count, 2)
+        sleep.assert_called_once_with(5)
+
 
 if __name__ == "__main__":
     unittest.main()

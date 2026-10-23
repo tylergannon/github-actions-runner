@@ -215,6 +215,35 @@ def prune_owned_images(config):
     return removed
 
 
+def wait_manager_idle(config, root):
+    if not config.get("manager_config"):
+        return
+    import tomllib
+    manager = tomllib.loads(owned(root, config["manager_config"]).read_text())
+    repositories = sorted({s["url"].removeprefix("https://github.com/").rstrip("/") for s in manager["scaleset"]})
+    deadline = time.monotonic() + config.get("drain_seconds", 5400)
+    quiet_since = None
+    while True:
+        # GitHub knows a job has been assigned before the scale-set listener
+        # receives JobStarted. Do not rely on the manager's busy=0 alone: its
+        # idle-runner drain can otherwise remove an already assigned worker.
+        busy = False
+        for repository in repositories:
+            response = gh(f"repos/{repository}/actions/runs?status=in_progress&per_page=100")
+            busy |= bool(response["workflow_runs"])
+        now = time.monotonic()
+        if busy:
+            quiet_since = None
+        else:
+            if quiet_since is None:
+                quiet_since = now
+            if now - quiet_since >= config.get("quiet_seconds", 15):
+                return
+        if now > deadline:
+            raise TimeoutError("GitHub workflows stayed active; caches were not cleared")
+        time.sleep(5)
+
+
 def maintain_host(config):
     root = Path(config["root"]).resolve(strict=True)
     result = {"started": time.time(), "ok": False}
@@ -238,6 +267,7 @@ def maintain_host(config):
                     if time.monotonic() > deadline:
                         raise TimeoutError("native job did not finish before maintenance deadline")
                     time.sleep(5)
+            wait_manager_idle(config, root)
             execution = [s for s in config.get("services", []) if s.get("execution")] + [n["service"] for n in config.get("native", [])]
             for svc in execution:
                 if active(svc):
