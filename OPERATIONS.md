@@ -44,6 +44,12 @@ that directory. Obtain archives and SHA-256 checksums from go.dev. This lets
 Verify that the base is unregistered before stopping it and allowing new clones.
 A local base image still needs a measured size and update policy.
 
+For Developer ID signing, install the matching Apple intermediate certificate
+from [Apple PKI](https://www.apple.com/certificateauthority/) in the base's system
+keychain. A P12 containing only the leaf certificate and private key can import
+successfully while yielding no valid code-signing identity on a clean VM. Keep
+private keys in the job's temporary keychain, never in the golden image.
+
 ## Linux service and caches
 
 Build `images/linux/Dockerfile` and serve the local image from a loopback-only
