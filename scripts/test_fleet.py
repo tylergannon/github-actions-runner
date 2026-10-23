@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -55,6 +56,22 @@ class MaintenanceTests(unittest.TestCase):
         self.assertTrue(any(method == "DELETE" for _, method, _ in calls))
         self.assertEqual(calls[-1][1:], ("POST", {"labels": ["example"]}))
         self.assertEqual((self.root / "evidence/report.json").read_text(), "private proof")
+
+    def test_image_retention_removes_only_expired_owned_tag(self):
+        self.config["image_retention"] = [{"repository_prefix": "application-check-", "days": 14}]
+        calls = []
+
+        def docker(args, **kwargs):
+            calls.append(args)
+            if args[2] == "ls":
+                return SimpleNamespace(stdout='{"Repository":"unrelated","Tag":"latest"}\n{"Repository":"application-check-old","Tag":"latest"}\n{"Repository":"application-check-new","Tag":"latest"}\n')
+            if args[2] == "inspect":
+                return SimpleNamespace(stdout="2010-01-01T00:00:00Z" if "-old:" in args[3] else "2100-01-01T00:00:00Z")
+            return SimpleNamespace(stdout="")
+
+        with patch.object(fleet, "run", side_effect=docker):
+            self.assertEqual(fleet.prune_owned_images(self.config), ["application-check-old:latest"])
+        self.assertEqual([x for x in calls if x[2] == "rm"], [["docker", "image", "rm", "application-check-old:latest"]])
 
 
 if __name__ == "__main__":
