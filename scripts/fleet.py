@@ -230,7 +230,9 @@ def wait_manager_idle(config, root):
         busy = False
         for repository in repositories:
             response = gh(f"repos/{repository}/actions/runs?status=in_progress&per_page=100")
-            busy |= bool(response["workflow_runs"])
+            for workflow in response["workflow_runs"]:
+                jobs = gh(f"repos/{repository}/actions/runs/{workflow['id']}/jobs?per_page=100")
+                busy |= any(job["status"] == "in_progress" for job in jobs["jobs"])
         now = time.monotonic()
         if busy:
             quiet_since = None

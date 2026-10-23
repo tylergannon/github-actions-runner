@@ -76,9 +76,9 @@ class MaintenanceTests(unittest.TestCase):
     def test_waits_for_github_assignment_even_before_manager_reports_busy(self):
         (self.root / "manager.toml").write_text('[[scaleset]]\nurl="https://github.com/owner/repo"\n')
         self.config.update(manager_config="manager.toml", quiet_seconds=0)
-        with patch.object(fleet, "gh", side_effect=[{"workflow_runs": [{"id": 1}]}, {"workflow_runs": []}]) as api, patch.object(fleet.time, "sleep") as sleep:
+        with patch.object(fleet, "gh", side_effect=[{"workflow_runs": [{"id": 1}]}, {"jobs": [{"status": "in_progress"}]}, {"workflow_runs": []}]) as api, patch.object(fleet.time, "sleep") as sleep:
             fleet.wait_manager_idle(self.config, self.root)
-        self.assertEqual(api.call_count, 2)
+        self.assertEqual(api.call_count, 3)
         sleep.assert_called_once_with(5)
 
 
