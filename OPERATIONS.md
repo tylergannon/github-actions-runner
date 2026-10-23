@@ -195,7 +195,9 @@ Maintenance temporarily removes native custom routing labels, waits for existing
 native jobs and a quiet period with no active GitHub workflows in consuming
 repositories, then drains/stops the managers and native services, resets caches and
 retains 14 days of native diagnostics by default. Current workflows must select
-native runners by their custom labels. Previously active services and routing
+native runners by their custom labels. Manager drain and native-service stop
+windows must exceed the longest job timeout; the examples allow 100 minutes
+for the existing 90-minute ARM64 release workload. Previously active services and routing
 labels are restored even when cleanup fails. Services that were stopped stay
 stopped. The host records its last result under `CI_ROOT/maintenance.json`.
 Caches owned by container uid 1001 are cleared by a networkless Docker helper

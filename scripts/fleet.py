@@ -57,7 +57,7 @@ def service(config, action):
         result = run([config["bridge"], "unregister", config["agent"]]) if config["kind"] == "smappservice" else run(["launchctl", "bootout", target])
         if match:
             pid = int(match[1])
-            deadline = time.monotonic() + 2400
+            deadline = time.monotonic() + 6100
             while True:
                 try:
                     os.kill(pid, 0)
