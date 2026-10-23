@@ -58,6 +58,21 @@ Credentials, machine-specific manifests and execution evidence stay outside
 this public repository. External fork jobs retain their existing GitHub-hosted
 routing and approval boundaries.
 
+## Updating a project’s software
+
+Projects can contribute their own Dockerfile under `images/PROJECT/` in this
+repository. Extend the shared Linux image, install the project’s required tools
+at image-build time, and build/push a distinct project image tag. Set that
+project’s `[[scaleset]]` `runner-image` to the tag; macOS scale sets can likewise
+select their own prepared Tart base VM. Drain existing jobs before restarting
+the manager with changed configuration.
+
+The existing manager already supports a different image per project. Image
+updates do not require changing application code or making every project’s
+tests pass. Keep installed tools out of cleanup targets. See
+[the configuration example](examples/linux-fleet.toml) and
+[build instructions](OPERATIONS.md#project-specific-images).
+
 ## Storage and operation
 
 | Keep installed | Eligible for cleanup |

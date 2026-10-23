@@ -8,3 +8,6 @@ decision: Use Go 1.27.3 as the baseline and prefer current stable releases. Olde
 friction: The installed fleet is ahead of main on open PR 4. Continue its existing native app and maintenance implementation rather than recreating them from the stale main checkout.
 doc_bug: Installed native cleanup policies include _work/_tool or its parent, deleting tool installations weekly. Protect installations in fleet.py and narrow those deployed cleanup paths.
 friction: A tool volume below an absent _work makes Docker create _work as root, failing jobs before steps with UnauthorizedAccessException for _work/_temp. Prepare runner-owned work and HOME mount parents in the image before deploying nested software mounts.
+
+correction: Deliver the shared runner platform; application failures are reported to their projects and do not authorize product fixes. The user explicitly approved only the existing SKGO Go 1.27.3 alignment for merge.
+decision: Project image customization uses the existing per-scale-set runner-image setting and project Dockerfiles in this repository, without a new controller or application migration.

@@ -42,6 +42,8 @@ path = "/home/runner/_work/_tool"
 [[scaleset]]
 url = "https://github.com/OWNER/APPLICATION"
 name = "application-linux"
+# Optional: select this project's prepared image instead of the shared default.
+# runner-image = "localhost:15000/github-actions-runner-application:VERSION"
 token = "env:RUNNER_TOKEN"
 labels = ["application-linux"]
 max-runners = 4

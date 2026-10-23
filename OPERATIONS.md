@@ -58,6 +58,30 @@ public infrastructure repository has no active self-hosted workflow. Register
 workers for the consuming project and run only trusted code on them; fork PR
 checks should use GitHub-hosted workers with external workflow approval retained.
 
+## Project-specific images
+
+A project can add `images/PROJECT/Dockerfile` here, extending the shared image:
+
+```dockerfile
+FROM localhost:15000/github-actions-runner-poc:local
+USER root
+# Install this project's additional software here.
+USER runner
+```
+
+Build on Bob and push to its local registry, using a distinct versioned tag:
+
+```sh
+docker build -t localhost:15000/github-actions-runner-PROJECT:VERSION -f images/PROJECT/Dockerfile .
+docker push localhost:15000/github-actions-runner-PROJECT:VERSION
+```
+
+In that project's `[[scaleset]]` entry, set `runner-image` to the published tag,
+before `[scaleset.docker]`. After existing jobs finish, restart the manager to
+load the configuration. Other projects retain their own image selection. Mac
+scale sets use the same setting to select a prepared Tart base. These changes
+belong to runner provisioning; application fixes remain separate work.
+
 ## Build the manager and Mac app
 
 ```sh
