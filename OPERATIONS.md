@@ -60,7 +60,9 @@ named service and timer. Verify the intended startup scope before enabling it.
 The Docker workers have no independent restart policy or host socket mount.
 The example ceilings are four Linux workers and two Mac VMs, with zero idle
 workers. Set these explicitly for available host resources; CPU/memory/process
-limits apply separately to each worker. Create the three named
+limits apply separately to each worker. Both examples provide 4 CPUs and
+8 GiB per worker. A migration must preserve the replaced fleet's parallel job
+count and existing CPU/RAM limits; increase capacity when changing that baseline. Create the three named
 local-driver volumes as bind mounts from the owned cache directories:
 
 | Host category | Worker mount | Policy |

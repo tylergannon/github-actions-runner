@@ -26,8 +26,9 @@ memory and process limits. macOS jobs use fresh disposable Tart macOS VMs on
 Apple hardware. Docker on macOS cannot qualify Darwin, Xcode or Apple signing.
 Export useful evidence, stop each worker, and remove its writable environment.
 
-The examples scale from zero to one worker. Final concurrency is an explicit
-capacity choice supported by measurements. Preserve repository routing and
+The examples scale from zero to four Linux workers or two Mac VMs. Concurrency
+is an explicit capacity choice. Migration must not reduce the existing parallel
+job count or configured worker CPU/RAM; changes should add capacity. Preserve repository routing and
 private qualification boundaries during an incremental migration. Do not
 recreate old workers until important writable-layer state has been accounted for.
 

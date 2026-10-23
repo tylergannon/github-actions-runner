@@ -18,8 +18,8 @@ guard = false
 [docker]
 socket = "/var/run/docker.sock"
 dind = false
-memory = 4096
-cpu = 2
+memory = 8192
+cpu = 4
 pids-limit = 1024
 prune = false
 buildx-cleanup = false
