@@ -7,3 +7,4 @@ correction: Persistent installations do not require permanently running workers.
 decision: Use Go 1.27.3 as the baseline and prefer current stable releases. Older go.mod minimums do not require the older compiler; explicit setup-go version requests are a separate source of repeated downloads.
 friction: The installed fleet is ahead of main on open PR 4. Continue its existing native app and maintenance implementation rather than recreating them from the stale main checkout.
 doc_bug: Installed native cleanup policies include _work/_tool or its parent, deleting tool installations weekly. Protect installations in fleet.py and narrow those deployed cleanup paths.
+friction: A tool volume below an absent _work makes Docker create _work as root, failing jobs before steps with UnauthorizedAccessException for _work/_temp. Prepare runner-owned work and HOME mount parents in the image before deploying nested software mounts.

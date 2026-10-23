@@ -8,6 +8,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=go /usr/local/go /usr/local/go
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
+# Docker creates absent mount parents as root. The runner must own its work
+# and HOME parents before permanent tool volumes are mounted below them.
+RUN mkdir -p /home/runner/_work /home/runner/.local/share /home/runner/.cache \
+    && chown -R runner:runner /home/runner/_work /home/runner/.local /home/runner/.cache
 ENV PATH="/usr/local/go/bin:/opt/vite-plus/bin:${PATH}" \
     VP_HOME=/opt/vite-plus \
     GOMODCACHE=/cache/go-mod \
