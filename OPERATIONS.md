@@ -112,6 +112,26 @@ workflows, plus its signed packaging if used. Retire only workers whose workload
 have moved successfully. Further cache sharing, hard quotas and broader failure
 simulation are separate improvements rather than an open-ended delivery gate.
 
+## Multiple projects on one host
+
+Use one manager with multiple `[[scaleset]]` entries, as shown in
+`examples/linux-fleet.toml` and `examples/macos-fleet.toml`. Each entry registers
+with its own consuming repository; workflows select its scale-set name with
+`runs-on`. Keep per-project worker counts and CPU/RAM settings explicit. Set
+the process-wide `concurrent` limit to accommodate the combined fleet rather
+than retaining the limit from the first project migrated.
+
+Linux scale sets inherit the three shared caches. They are intended for trusted
+projects sharing a host. A private evaluator that retains evidence or needs host
+authentication must keep that state and access boundary when ordinary CI moves;
+do not discard its journals with a job workspace.
+
+Mac projects can select different golden VMs. Native app packaging needs a base
+with full Xcode selected, its license accepted and first-launch components
+installed. Keep release credentials out of both bases. Wait for GitHub jobs to
+finish before replacing a configuration or app; an idle health counter alone
+does not establish that no job is running.
+
 ## Weekly operation
 
 Enable the native Linux cache-reset timer with the installed manager and registry.

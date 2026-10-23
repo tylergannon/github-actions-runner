@@ -1,0 +1,57 @@
+# One manager per host; each repository keeps its own routing and worker limits.
+provider = "docker"
+runner-image = "localhost:15000/github-actions-runner-poc:local"
+concurrent = 6
+health-port = 18089
+log-file = "/srv/github-actions-runner-poc/logs/runner.log"
+drain-timeout = "30m"
+
+[disk]
+guard = false
+
+[docker]
+socket = "/var/run/docker.sock"
+dind = false
+pids-limit = 1024
+prune = false
+buildx-cleanup = false
+
+[[docker.cache]]
+name = "github-actions-runner-poc-go-mod"
+path = "/cache/go-mod"
+budget = "2GB"
+on-exceed = "warn"
+
+[[docker.cache]]
+name = "github-actions-runner-poc-go-build"
+path = "/cache/go-build"
+budget = "2GB"
+on-exceed = "warn"
+
+[[docker.cache]]
+name = "github-actions-runner-poc-pnpm"
+path = "/cache/pnpm"
+budget = "1GB"
+on-exceed = "warn"
+
+[[scaleset]]
+url = "https://github.com/OWNER/APPLICATION"
+name = "application-linux"
+token = "env:RUNNER_TOKEN"
+labels = ["application-linux"]
+max-runners = 4
+min-runners = 0
+[scaleset.docker]
+cpu = 4
+memory = 8192
+
+[[scaleset]]
+url = "https://github.com/OWNER/COMPILER"
+name = "compiler-linux"
+token = "env:RUNNER_TOKEN"
+labels = ["compiler-linux"]
+max-runners = 2
+min-runners = 0
+[scaleset.docker]
+cpu = 8
+memory = 16384

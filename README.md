@@ -12,6 +12,7 @@ workspace and HOME. Linux workers share three explicit Go/package caches.
 - [Building, configuring and operating](OPERATIONS.md)
 - [Linux configuration example](examples/linux.toml)
 - [macOS configuration example](examples/macos.toml)
+- Multi-project examples: [Linux](examples/linux-fleet.toml), [macOS](examples/macos-fleet.toml)
 - [Manual qualification workflow](examples/workflows/poc.yml)
 
 The delivery target is a working replacement for an existing project's jobs:
