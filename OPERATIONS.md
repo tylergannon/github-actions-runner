@@ -192,7 +192,7 @@ it. Each host manifest can declare the scoped Tart cache command with its
 `TART_HOME`; retain golden VMs. Do not run daemon-wide Docker pruning.
 
 Maintenance temporarily removes native custom routing labels, waits for existing
-native jobs and a quiet period with no active GitHub workflows in consuming
+native jobs and a quiet period with no active GitHub jobs in consuming
 repositories, then drains/stops the managers and native services, resets caches and
 retains 14 days of native diagnostics by default. Current workflows must select
 native runners by their custom labels. Manager drain and native-service stop

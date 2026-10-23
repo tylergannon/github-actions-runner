@@ -3,7 +3,7 @@ provider = "tart"
 concurrent = 2
 health-port = 18089
 log-file = "/Users/runner/CI/github-actions-runner/poc/logs/runner.log"
-drain-timeout = "2m"
+drain-timeout = "100m"
 
 [disk]
 guard = false
