@@ -2,3 +2,7 @@
 /ephemeral/reference/
 /ephemeral/downloads/
 /ephemeral/private/
+
+# Local Python operator/test bytecode.
+__pycache__/
+*.pyc
