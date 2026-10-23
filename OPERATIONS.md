@@ -132,6 +132,11 @@ installed. Keep release credentials out of both bases. Wait for GitHub jobs to
 finish before replacing a configuration or app; an idle health counter alone
 does not establish that no job is running.
 
+The pinned manager permits at most two running Tart VMs per Mac, shared across
+all scale sets. Raising `concurrent` does not increase that limit. A migration
+from more than two native Mac workers must retain native capacity or use another
+Mac; do not silently serialize the existing workloads into two VM slots.
+
 ## Weekly operation
 
 Enable the native Linux cache-reset timer with the installed manager and registry.
