@@ -3,6 +3,9 @@ FROM node:24-bookworm AS node
 FROM ghcr.io/actions/actions-runner:2.338.1
 
 USER root
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends build-essential pkg-config lsof gh unzip zsh \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=go /usr/local/go /usr/local/go
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 ENV PATH="/usr/local/go/bin:/opt/vite-plus/bin:${PATH}" \

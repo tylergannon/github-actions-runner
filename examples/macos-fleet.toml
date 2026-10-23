@@ -1,0 +1,38 @@
+provider = "tart"
+# The manager enforces at most two simultaneous Tart VMs across all scale sets.
+concurrent = 2
+health-port = 18089
+log-file = "/Users/runner/CI/github-actions-runner/poc/logs/runner.log"
+drain-timeout = "2m"
+
+[disk]
+guard = false
+
+[tart]
+home = "/Users/runner/CI/github-actions-runner/tart"
+runner-dir = "/Users/admin/actions-runner"
+cpu = 4
+memory = 8192
+pool-size = 0
+cache-cleanup = true
+cache-max-age = "168h"
+cache-budget = 8
+cache-cleanup-interval = "6h"
+
+[[scaleset]]
+url = "https://github.com/OWNER/APPLICATION"
+name = "application-macos"
+token = "env:RUNNER_TOKEN"
+labels = ["application-macos"]
+runner-image = "github-actions-runner-poc-base"
+max-runners = 1
+min-runners = 0
+
+[[scaleset]]
+url = "https://github.com/OWNER/NATIVE-APPLICATION"
+name = "native-application-macos"
+token = "env:RUNNER_TOKEN"
+labels = ["native-application-macos"]
+runner-image = "github-actions-runner-xcode-base"
+max-runners = 1
+min-runners = 0
