@@ -1,7 +1,9 @@
 # GitHub Actions Runner infrastructure
 
-Native service packaging and example configuration for disposable GitHub Actions
-workers: Docker containers on Linux and Tart macOS VMs on Apple hardware.
+Service packaging and configuration for the whole GitHub Actions runner fleet:
+disposable Linux containers and macOS VMs, plus native release and private
+qualification runners. Every runner belongs to the same inventory and maintenance
+policy.
 
 The proof of concept reuses an unchanged [runscaler](https://github.com/ysya/runscaler)
 manager. systemd owns the Linux service; a small Swift SMAppService bridge
@@ -13,6 +15,7 @@ workspace and HOME. Linux workers share three explicit Go/package caches.
 - [Linux configuration example](examples/linux.toml)
 - [macOS configuration example](examples/macos.toml)
 - Multi-project examples: [Linux](examples/linux-fleet.toml), [macOS](examples/macos-fleet.toml)
+- [Fleet manifest](examples/fleet.json) and [host manifest](examples/host.json)
 - [Manual qualification workflow](examples/workflows/poc.yml)
 
 The delivery target is a working replacement for an existing project's jobs:
@@ -26,3 +29,10 @@ fork PR checks to GitHub-hosted workers and retain approval for external workflo
 Host-specific
 configuration, credentials, inventories and execution evidence belong outside
 this public source repository.
+
+Use the installed `fleet.py FLEET_JSON status` command to inspect every declared
+host. One scheduled `fleet.py FLEET_JSON maintain` invocation drains execution
+and clears declared caches on all hosts. Native services remain owned by systemd
+or the signed Mac app through SMAppService; there is no Python background agent
+on macOS. Private evaluator reports and publication journals are retained data,
+not caches.

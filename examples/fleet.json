@@ -1,0 +1,6 @@
+{
+  "hosts": [
+    {"name": "mac", "python": "/opt/homebrew/bin/python3", "script": "/Users/runner/CI/github-actions-runner/bin/fleet.py", "config": "/Users/runner/CI/github-actions-runner/config/host.json"},
+    {"name": "linux", "ssh": "ci-linux", "script": "/srv/github-actions-runner/bin/fleet.py", "config": "/srv/github-actions-runner/config/host.json"}
+  ]
+}

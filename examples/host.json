@@ -1,0 +1,42 @@
+{
+  "root": "/srv/github-actions-runner",
+  "manager_config": "config/runner.private.toml",
+  "services": [
+    {
+      "kind": "systemd",
+      "unit": "github-actions-runner.service",
+      "execution": true
+    }
+  ],
+  "native": [
+    {
+      "name": "private-evaluator",
+      "repository": "OWNER/PROJECT",
+      "directory": "native/private-evaluator",
+      "command": [
+        "./run.sh"
+      ],
+      "environment": {
+        "GOCACHE": "/srv/github-actions-runner/caches/native/go-build",
+        "GOMODCACHE": "/srv/github-actions-runner/caches/native/go-mod"
+      },
+      "service": {
+        "kind": "systemd",
+        "unit": "github-actions-runner-native-private-evaluator.service"
+      }
+    }
+  ],
+  "cache_paths": [
+    "caches/go-mod",
+    "caches/go-build",
+    "caches/pnpm",
+    "caches/native",
+    "native/private-evaluator/_work/_actions"
+  ],
+  "cleanup_image": "localhost:15000/github-actions-runner:local",
+  "log_paths": [
+    "native/private-evaluator/_diag/*.log"
+  ],
+  "log_days": 14,
+  "drain_seconds": 5400
+}
