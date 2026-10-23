@@ -14,7 +14,7 @@
 		<string>/Users/runner/Applications/Tart.app/Contents/MacOS:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
 	</dict>
 	<key>ExitTimeOut</key>
-	<integer>150</integer>
+	<integer>6100</integer>
 	<key>KeepAlive</key>
 	<dict>
 		<key>SuccessfulExit</key>

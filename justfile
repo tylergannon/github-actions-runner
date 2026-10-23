@@ -1,6 +1,10 @@
 root := justfile_directory()
 manager_revision := "60ced08cbc3c6b52f728c87fbdbd225977ce9189"
 
+# Run during provisioning/updates, not inside every job.
+provision-tools cache go_version="1.27.3" node_version="24.22.1":
+    python3 '{{root}}/scripts/provision-tools.py' --tool-cache '{{cache}}' --go '{{go_version}}' --node '{{node_version}}'
+
 # Build the unchanged upstream manager with a recognizable executable name.
 build-manager:
     mkdir -p '{{root}}/build' '{{root}}/ephemeral/reference'
@@ -16,10 +20,13 @@ build-macos-app identity:
     cp '{{root}}/build/github-actions-runner-darwin-arm64' '{{root}}/build/GitHub Actions Runner.app/Contents/MacOS/github-actions-runner'
     cp '{{root}}/platforms/macos/Info.plist' '{{root}}/build/GitHub Actions Runner.app/Contents/Info.plist'
     cp '{{root}}/platforms/macos/com.tylergannon.github-actions-runner.poc.plist' '{{root}}/build/GitHub Actions Runner.app/Contents/Library/LaunchAgents/'
+    cp '{{root}}/platforms/macos/com.tylergannon.github-actions-runner.native.plist' '{{root}}/build/GitHub Actions Runner.app/Contents/Library/LaunchAgents/'
     cp '{{root}}/ephemeral/reference/runscaler/LICENSE' '{{root}}/build/GitHub Actions Runner.app/Contents/Resources/runscaler-LICENSE'
     swift '{{root}}/platforms/macos/MakeIcon.swift' '{{root}}/build/RunnerIcon.iconset'
     iconutil --convert icns '{{root}}/build/RunnerIcon.iconset' --output '{{root}}/build/GitHub Actions Runner.app/Contents/Resources/RunnerIcon.icns'
     swiftc -parse-as-library -O -target arm64-apple-macosx13.0 '{{root}}/platforms/macos/ServiceRegistration.swift' -o '{{root}}/build/GitHub Actions Runner.app/Contents/MacOS/github-actions-runner-service'
+    swiftc -parse-as-library -O -target arm64-apple-macosx13.0 '{{root}}/platforms/macos/NativeRunner.swift' -o '{{root}}/build/GitHub Actions Runner.app/Contents/MacOS/github-actions-native-runner'
     codesign --force --options runtime --timestamp --sign '{{identity}}' '{{root}}/build/GitHub Actions Runner.app/Contents/MacOS/github-actions-runner'
+    codesign --force --options runtime --timestamp --sign '{{identity}}' '{{root}}/build/GitHub Actions Runner.app/Contents/MacOS/github-actions-native-runner'
     codesign --force --options runtime --timestamp --sign '{{identity}}' '{{root}}/build/GitHub Actions Runner.app'
     codesign --verify --deep --strict '{{root}}/build/GitHub Actions Runner.app'

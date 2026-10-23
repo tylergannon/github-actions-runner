@@ -9,8 +9,10 @@ decide which outputs constitute useful evidence.
 
 Use established runner implementations rather than writing another supervisor.
 The PoC packages unchanged runscaler at the revision in `components.toml`,
-using its Docker and Tart providers. The Swift bridge only registers an embedded
-LaunchAgent through Apple's SMAppService; it does not control worker lifecycle.
+using its Docker and Tart providers. The Swift bridge registers the embedded manager and native execution agents
+through Apple's SMAppService; it does not control worker lifecycle. Native Mac
+entry points are compiled and signed inside the owning app, never registered
+as independent Python or shell background agents.
 The macOS app includes an icon and supports code signing with the operator's
 identity. Verify the actual System Settings attribution after installation.
 
@@ -19,11 +21,20 @@ workers. Do not add a competing Docker restart policy or shell restart loop.
 Native start, stop, enable/disable, update and startup behavior must be verified.
 A stop must handle real children, and recovery must reconcile owned leftovers.
 
-## Disposable execution
+## On-demand execution with persistent software
+
+Worker lifetime and software lifetime are separate. Ordinary workers may be
+removed after a job and scale to zero, while installed tools remain in reusable
+images, base VMs or protected tool stores. Jobs must reuse those installations.
+Current stable Go is the policy, starting with 1.27.3; module minimums do not
+force selection of an older compiler. Weekly cleanup never deletes tool caches,
+current prepared environments, runner installations or configuration.
 
 Linux jobs use Ubuntu-based disposable Docker containers, with explicit CPU,
 memory and process limits. macOS jobs use fresh disposable Tart macOS VMs on
-Apple hardware. Docker on macOS cannot qualify Darwin, Xcode or Apple signing.
+Apple hardware, or native app-owned services where existing capacity or private
+state requires host execution. Native runners are part of the same fleet and
+maintenance policy. Docker on macOS cannot qualify Darwin, Xcode or Apple signing.
 Export useful evidence, stop each worker, and remove its writable environment.
 
 The examples scale from zero to four Linux workers or two Mac VMs. Concurrency
@@ -59,7 +70,7 @@ filesystem limits, cache tools and native scheduled cleanup over a new controlle
 Request Node as `24` and record resolved versions in diagnostics. Routine patch
 upgrades should not require editing every application workflow. Keep GitHub's
 bundled Node runtimes, which execute JavaScript Actions independently of build
-Node. The Linux example uses Go `1.27`; this is not an exact shared patch policy.
+Node. Go `1.27.3` is the current prepared baseline; workflows select stable.
 Use `vp install`, `vp run`, `vp exec` and `vp dlx` for frontend work.
 
 Container layers and cloned VM bases share installed tools. Avoid unexplained

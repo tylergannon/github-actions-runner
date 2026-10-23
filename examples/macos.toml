@@ -10,7 +10,7 @@ min-runners = 0
 concurrent = 2
 health-port = 18089
 log-file = "/Users/runner/CI/github-actions-runner/poc/logs/runner.log"
-drain-timeout = "2m"
+drain-timeout = "100m"
 
 [disk]
 guard = false
@@ -21,7 +21,7 @@ runner-dir = "/Users/admin/actions-runner"
 cpu = 4
 memory = 8192
 pool-size = 0
-cache-cleanup = true
+cache-cleanup = false # The single fleet maintenance task owns cache retention.
 cache-max-age = "168h"
 cache-budget = 8
 cache-cleanup-interval = "6h"

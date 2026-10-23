@@ -4,7 +4,7 @@ runner-image = "localhost:15000/github-actions-runner-poc:local"
 concurrent = 6
 health-port = 18089
 log-file = "/srv/github-actions-runner-poc/logs/runner.log"
-drain-timeout = "30m"
+drain-timeout = "100m"
 
 [disk]
 guard = false
@@ -34,14 +34,22 @@ path = "/cache/pnpm"
 budget = "1GB"
 on-exceed = "warn"
 
+# Installed software shared across jobs, outside the weekly cache reset.
+[[docker.cache]]
+name = "github-actions-runner-tools"
+path = "/home/runner/_work/_tool"
+
 [[scaleset]]
 url = "https://github.com/OWNER/APPLICATION"
 name = "application-linux"
+# Optional: select this project's prepared image instead of the shared default.
+# runner-image = "localhost:15000/github-actions-runner-application:VERSION"
 token = "env:RUNNER_TOKEN"
 labels = ["application-linux"]
 max-runners = 4
 min-runners = 0
 [scaleset.docker]
+cache-volumes = ["application-vp:/opt/vite-plus", "application-mise:/home/runner/.local/share/mise", "application-browsers:/home/runner/.cache/ms-playwright"]
 cpu = 4
 memory = 8192
 
@@ -53,5 +61,6 @@ labels = ["compiler-linux"]
 max-runners = 2
 min-runners = 0
 [scaleset.docker]
+cache-volumes = ["compiler-vp:/opt/vite-plus", "compiler-mise:/home/runner/.local/share/mise", "compiler-browsers:/home/runner/.cache/ms-playwright"]
 cpu = 8
 memory = 16384

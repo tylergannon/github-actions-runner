@@ -1,10 +1,86 @@
 # Build and configure
 
+Required software persists; ordinary workers may scale to zero. Go 1.27.3 is
+the current baseline. Use `go-version: stable` in `actions/setup-go` rather than
+`go-version-file`: the latter installs the module's minimum version, even when
+a newer compatible compiler is already installed. A module's `go` line remains
+its compatibility minimum and does not need to change for this runner update.
+
+## Provision tools once
+
+Install verified releases in GitHub's tool-cache layout during provisioning:
+
+```sh
+python3 scripts/provision-tools.py --tool-cache CI_ROOT/tools/actions --go 1.27.3 --node 24.22.1
+```
+
+For Linux, bind the `github-actions-runner-tools` volume to that directory and
+mount it at `/home/runner/_work/_tool`, as in the configuration examples. Provision
+both `--os linux --arch x64` and `--os linux --arch arm64` when both architectures
+are used. The cache layout separates installed binaries by architecture. Set
+ownership to container uid 1001. This is a permanent software store, despite the
+upstream mount setting being named `docker.cache`; never include it in weekly
+`cache_paths` or configure a wipe budget for it.
+
+For a Mac base, stop job admission and wait for existing jobs, boot the
+unregistered base, run the same script with the base runner's `_work/_tool`
+directory, verify versions and absence of `.runner`, stop the base, then resume
+the manager. For native runners, provision their `_work/_tool` directly while
+idle. Re-running the script reuses complete installations; archives are checked
+against upstream SHA-256 checksums before extraction.
+
+Other installed tools must also live in protected storage. For example, use
+architecture-specific volumes backed by `CI_ROOT/tools/mise-x64` and
+`CI_ROOT/tools/browsers-x64` for mise installations and Playwright browsers.
+Use separate ARM64 stores for tools whose layouts do not distinguish architecture.
+Dependency caches and build output remain under `CI_ROOT/caches`. Update prepared
+software deliberately to current stable versions; do not bootstrap the machine
+inside every workflow.
+
+Before mounting a bind-backed Vite+ store over `/opt/vite-plus`, seed the empty
+store from that directory in the prepared image. Otherwise an empty bind mount
+hides the image's installation. Keep Vite+ stores per project when projects
+select different active versions. Preinstall the tools declared by each
+project's mise configuration into its mise store; Mac-base provisioning must
+include those tools too, such as Zig and XcodeGen for native-shell workloads.
+Setup actions should report reuse on successive jobs.
+
+Cleanup refuses paths overlapping `bin`, `config`, `secrets`, `tools`, `images`,
+the image registry, local VMs and native runner installations/tool caches.
+Additional permanent data can be declared in `protected_paths`. Declare native
+workspace, `_temp` and `_actions` cleanup separately; never clear `_work` as a
+whole when it contains `_tool`. Configured worker images and the cleanup image
+are also excluded from image-retention deletion.
+
 These are deployment examples, not a record of a particular machine. Replace
 `OWNER/REPOSITORY` and the `/Users/runner` host path before deployment. The
 public infrastructure repository has no active self-hosted workflow. Register
 workers for the consuming project and run only trusted code on them; fork PR
 checks should use GitHub-hosted workers with external workflow approval retained.
+
+## Project-specific images
+
+A project can add `images/PROJECT/Dockerfile` here, extending the shared image:
+
+```dockerfile
+FROM localhost:15000/github-actions-runner-poc:local
+USER root
+# Install this project's additional software here.
+USER runner
+```
+
+Build on Bob and push to its local registry, using a distinct versioned tag:
+
+```sh
+docker build -t localhost:15000/github-actions-runner-PROJECT:VERSION -f images/PROJECT/Dockerfile .
+docker push localhost:15000/github-actions-runner-PROJECT:VERSION
+```
+
+In that project's `[[scaleset]]` entry, set `runner-image` to the published tag,
+before `[scaleset.docker]`. After existing jobs finish, restart the manager to
+load the configuration. Other projects retain their own image selection. Mac
+scale sets use the same setting to select a prepared Tart base. These changes
+belong to runner provisioning; application fixes remain separate work.
 
 ## Build the manager and Mac app
 
@@ -81,10 +157,10 @@ The image runs as uid 1001; cache ownership must permit that account to write.
 Both `PNPM_CONFIG_STORE_DIR` and `PNPM_CONFIG_CACHE_DIR` are needed for pnpm
 12 offline reuse. Application dependencies stay inside the disposable workspace.
 
-The cleanup oneshot stops the manager before emptying exactly those three
-caches using a networkless helper, then restarts the manager on success or
-failure. Its weekly timer has randomized delay and persistent catch-up. Enable
-maintenance deliberately alongside an unattended manager.
+Install `scripts/fleet.py` under the CI root's `bin/` directory on each host.
+Adapt `examples/host.json` to declare the manager, supporting services, native
+runners, cache paths and log retention. Keep private configuration outside the
+source checkout. Python 3.11 or newer is required for the operator command.
 
 The sample 2 GB/2 GB/1 GB cache budgets only warn. Weekly reset is retention,
 not an enforced capacity limit. The generic disk guard remains disabled because
@@ -143,20 +219,68 @@ all scale sets. Raising `concurrent` does not increase that limit. A migration
 from more than two native Mac workers must retain native capacity or use another
 Mac; do not silently serialize the existing workloads into two VM slots.
 
-## Weekly operation
+## Native workers and one fleet maintenance task
 
-Enable the native Linux cache-reset timer with the installed manager and registry.
-It drains the manager before resetting the three owned caches. On Mac, the
-manager's existing Tart cache maintenance runs periodically; job clones are
-removed after use. Keep its rotating log under the owned root.
+Use a host manifest for every installed runner. Docker/Tart scale sets are read
+from the manager configuration; native runners are declared alongside them.
+They keep their GitHub repository, labels, concurrency, credentials and existing
+job commands when moved below `CI_ROOT/native/`. Private qualification workspaces
+retain their reports and publication journals. Declare only rebuildable paths as
+`cache_paths`; do not declare the evidence directory itself as a cache.
 
-Schedule a weekly operational check after cache maintenance. Inspect both native
-services and health endpoints, free disk space, cache/image/log usage and the last
-maintenance result. Alert only for a failed service or maintenance run, low disk
-space, or material unexplained accumulation; healthy runs should remain quiet.
-Count idle zero-capacity operation as normal. Do not globally prune a shared
-Docker engine or delete active workers to satisfy a storage target.
+On Linux, `fleet.py HOST_JSON install-native` installs the declared systemd user
+units. The installed script execs GitHub's runner; systemd handles restarts. Use
+`platforms/linux/github-actions-runner-arm64-emulation.service` when ARM64 Linux
+containers run on an x64 host, and set `platform = "linux/arm64"` on their scale
+set. Build and push the worker image for that architecture. Preserve its CPU/RAM
+and add its slot to the manager's combined concurrency limit.
 
-The example cache thresholds warn rather than enforce hard quotas. This delivery
-uses scoped scheduled cleanup and a weekly exception check; it does not claim
-fail-closed storage admission.
+On Mac, native execution must be attributed to **GitHub Actions Runner.app**.
+The app embeds both the manager and a compiled native runner entry point, each
+registered through SMAppService. Adapt both embedded plists before signing.
+The native plist selects a host manifest and native runner name. A native entry's
+service has `kind: "smappservice"`, the installed `bridge` path, `agent: "native"`
+and label `com.tylergannon.github-actions-runner.native`. The manager selects
+`agent: "manager"`. The bridge accepts `register`, `unregister` and `status`
+with either service selector. Do not register Python, a shell, or an independent
+LaunchAgent: macOS would attribute that background item to the interpreter.
+Verify the installed signature and launchd's parent bundle identifier, as well
+as the app name shown in Login Items & Extensions.
+
+Copy `examples/fleet.json` outside the checkout and point it at each host manifest.
+Native Docker-building jobs should select a dedicated BuildKit builder through
+`BUILDX_BUILDER`, created with `docker buildx create --name github-actions-runner
+--driver docker-container --driver-opt default-load=true --bootstrap`. Declare
+its scoped `docker buildx prune --builder github-actions-runner --all --force`
+command in `cache_commands`. Explicit `image_retention` repository prefixes can
+expire old job image tags without pruning unrelated images or shared engines.
+
+The same operator command covers local and SSH hosts:
+
+```sh
+python3 CI_ROOT/bin/fleet.py CI_ROOT/config/fleet.json status
+python3 CI_ROOT/bin/fleet.py CI_ROOT/config/fleet.json maintain
+```
+
+Schedule **one** fleet maintenance invocation. Disable superseded per-runner
+cleanup timers and the manager's Tart periodic cache cleanup when this task owns
+it. Each host manifest can declare the scoped Tart cache command with its
+`TART_HOME`; retain golden VMs. Do not run daemon-wide Docker pruning.
+
+Maintenance temporarily removes native custom routing labels, waits for existing
+native jobs and a quiet period with no active GitHub jobs in consuming
+repositories, then drains/stops the managers and native services, resets caches and
+retains 14 days of native diagnostics by default. Current workflows must select
+native runners by their custom labels. Manager drain and native-service stop
+windows must exceed the longest job timeout; the examples allow 100 minutes
+for the existing 90-minute ARM64 release workload. Previously active services and routing
+labels are restored even when cleanup fails. Services that were stopped stay
+stopped. The host records its last result under `CI_ROOT/maintenance.json`.
+Caches owned by container uid 1001 are cleared by a networkless Docker helper
+mounted only on that host's CI root. Symlink escapes and deleting the whole root
+are refused. Logs are limited to 10 MiB per file by default at maintenance.
+
+The scheduled task should run maintenance, inspect fleet status and disk space,
+and remain quiet on unchanged healthy state. Report failed cleanup, service
+failure or unexplained growth. Private evidence remains visible storage with its
+own deliberate retention decision; it must never be swept as a disposable cache.

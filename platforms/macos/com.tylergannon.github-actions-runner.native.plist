@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.tylergannon.github-actions-runner.native</string>
+  <key>AssociatedBundleIdentifiers</key><array><string>com.tylergannon.github-actions-runner</string></array>
+  <key>BundleProgram</key><string>Contents/MacOS/github-actions-native-runner</string>
+  <key>ProgramArguments</key><array>
+    <string>github-actions-native-runner</string>
+    <string>/Users/runner/CI/github-actions-runner/config/host.json</string>
+    <string>native-application</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>ProcessType</key><string>Interactive</string>
+  <key>SessionCreate</key><true/>
+  <key>ExitTimeOut</key><integer>120</integer>
+  <key>StandardOutPath</key><string>/Users/runner/CI/github-actions-runner/logs/native-application/stdout.log</string>
+  <key>StandardErrorPath</key><string>/Users/runner/CI/github-actions-runner/logs/native-application/stderr.log</string>
+</dict></plist>
