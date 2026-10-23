@@ -2,8 +2,9 @@
 
 These are deployment examples, not a record of a particular machine. Replace
 `OWNER/REPOSITORY` and the `/Users/runner` host path before deployment. The
-public repository has no active self-hosted workflow; use a private qualification
-repository and register its workers there.
+public infrastructure repository has no active self-hosted workflow. Register
+workers for the consuming project and run only trusted code on them; fork PR
+checks should use GitHub-hosted workers with external workflow approval retained.
 
 ## Build the manager and Mac app
 
@@ -35,8 +36,13 @@ Install Tart from its official distribution. Set `TART_HOME` to the declared
 internal CI root for every manual Tart operation; configure the same root in
 TOML. Prepare an unregistered golden VM with the supported GitHub runner at
 `/Users/admin/actions-runner`. Keep signing credentials out of the base.
-Clones should share blocks on the same internal APFS filesystem. A local base
-image still needs an independent disk budget and update policy.
+Clones should share blocks on the same internal APFS filesystem. Before adopting
+real workloads, provision the Go toolchain those workflows require into the
+runner's `_work/_tool/go/<version>/arm64` cache and create `arm64.complete` beside
+that directory. Obtain archives and SHA-256 checksums from go.dev. This lets
+`actions/setup-go` reuse the installed toolchain in successive clean clones.
+Verify that the base is unregistered before stopping it and allowing new clones.
+A local base image still needs a measured size and update policy.
 
 ## Linux service and caches
 
@@ -87,8 +93,8 @@ errors before log initialization using config validation or a foreground run.
 Linux uses its rotating file plus the host's system journal; configure journal
 retention separately. Tart OCI/IPSW cache cleanup does not cap local VMs.
 
-Copy `examples/workflows/poc.yml` into the private qualification repository's
-`.github/workflows/` directory, adapt labels/config, and dispatch it there.
+Copy `examples/workflows/poc.yml` into a controlled qualification repository's
+`.github/workflows/` directory, adapt labels/config, and dispatch trusted code.
 The default scenario asserts distinct successive runners, clean HOME state,
 Linux offline Go/package cache reuse, and Mac compilation/ad-hoc signing and
 execution. The failure scenario intentionally exits 1 on both platforms. The
@@ -97,6 +103,25 @@ start. Inspect owned VM/container storage afterward; successful GitHub steps
 alone do not prove disposal.
 
 Keep proof output and operational inventories in the private execution repository
-or an appropriate private artifact store. Shared Mac caches, Go provisioning,
-release-signing credential delivery, enforced storage admission, artifact retention
-and interruption/reboot cleanup remain prerequisites for production adoption.
+or an appropriate private artifact store. For the first delivery, qualify the existing project's actual build and test
+workflows, plus its signed packaging if used. Retire only workers whose workloads
+have moved successfully. Further cache sharing, hard quotas and broader failure
+simulation are separate improvements rather than an open-ended delivery gate.
+
+## Weekly operation
+
+Enable the native Linux cache-reset timer with the installed manager and registry.
+It drains the manager before resetting the three owned caches. On Mac, the
+manager's existing Tart cache maintenance runs periodically; job clones are
+removed after use. Keep its rotating log under the owned root.
+
+Schedule a weekly operational check after cache maintenance. Inspect both native
+services and health endpoints, free disk space, cache/image/log usage and the last
+maintenance result. Alert only for a failed service or maintenance run, low disk
+space, or material unexplained accumulation; healthy runs should remain quiet.
+Count idle zero-capacity operation as normal. Do not globally prune a shared
+Docker engine or delete active workers to satisfy a storage target.
+
+The example cache thresholds warn rather than enforce hard quotas. This delivery
+uses scoped scheduled cleanup and a weekly exception check; it does not claim
+fail-closed storage admission.

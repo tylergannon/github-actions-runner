@@ -14,11 +14,14 @@ workspace and HOME. Linux workers share three explicit Go/package caches.
 - [macOS configuration example](examples/macos.toml)
 - [Manual qualification workflow](examples/workflows/poc.yml)
 
-This is experimental infrastructure. Storage quotas, shared macOS caches,
-release-signing credentials and interruption recovery still need qualification.
-Node is requested as `24`; frontend commands use Vite+.
+The delivery target is a working replacement for an existing project's jobs:
+real workflows pass, installed services start automatically, completed workers
+are removed, and weekly maintenance handles routine storage care. Node is
+requested as `24`; frontend commands use Vite+.
 
-The public repository does not run self-hosted Actions. Run the example workflow
-in a private qualification repository containing only trusted code. Host-specific
+This public infrastructure repository does not run self-hosted Actions. Qualify
+consuming projects using trusted branches or controlled manual dispatches; route
+fork PR checks to GitHub-hosted workers and retain approval for external workflows.
+Host-specific
 configuration, credentials, inventories and execution evidence belong outside
 this public source repository.

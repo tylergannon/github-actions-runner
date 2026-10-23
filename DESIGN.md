@@ -70,17 +70,24 @@ pins establish provenance and differ from routine application patch pins.
 Prove real GitHub execution, distinct successive workers, fresh HOME state,
 cache reuse, disposal and native OS identity. Test failure/cancellation and
 interruption, busy stop, updates and startup. Verify enforced storage budgets,
-artifact retention and real release signing before production adoption.
+artifact retention and real release signing where required by the selected workload.
 
 Keep machine inventories, local installation details, credentials, execution
 logs and screenshots out of this public repository. The example qualification
-workflow belongs in a private execution repository. Register self-hosted capacity
-there, and admit only trusted code; disposable workers still share the host's
-network and selected caches. Do not attach self-hosted capacity to public PR
-execution as part of adopting these examples.
+workflow belongs in a controlled execution repository. Admit only trusted code; disposable workers still share the host's
+network and selected caches. Route fork PR checks to GitHub-hosted workers and retain approval for external
+workflows when adopting self-hosted capacity in a public consuming project.
 
 Known PoC limitations include warning-only Linux cache budgets, missing shared
 macOS cache mounts, and an upstream startup check that can misclassify very short
 successful Mac jobs as startup failures. The qualification workflow waits through
 that observation window; it does not fix the manager defect. Compilation/signing
 of a small binary is not application release qualification.
+
+## Concrete delivery boundary
+
+The first useful delivery replaces an existing project's Linux and Mac workloads,
+proves those actual workflows, enables native automatic startup and scoped weekly
+maintenance, and provides a quiet weekly exception check. Retire the corresponding
+old workers after their jobs have moved. Further reliability work has separate
+acceptance criteria and does not keep this cutover open indefinitely.
