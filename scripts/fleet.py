@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -190,6 +191,13 @@ def clear_caches(config, root):
         for path in paths:
             for child in path.iterdir():
                 if child.is_dir() and not child.is_symlink():
+                    # Go module caches contain read-only directories. Grant the
+                    # owner delete permission only inside this disposable tree;
+                    # os.walk does not traverse directory symlinks.
+                    for directory, _, _ in os.walk(child, followlinks=False):
+                        mode = stat.S_IMODE(os.stat(directory).st_mode)
+                        if not mode & stat.S_IWUSR:
+                            os.chmod(directory, mode | stat.S_IWUSR)
                     shutil.rmtree(child)
                 else:
                     child.unlink()

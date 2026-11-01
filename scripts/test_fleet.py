@@ -24,6 +24,29 @@ class MaintenanceTests(unittest.TestCase):
         self.assertEqual(list((self.root / "caches").iterdir()), [])
         self.assertEqual((self.root / "evidence/report.json").read_text(), "private proof")
 
+    def test_cleanup_removes_read_only_go_module_directories(self):
+        module = self.root / "caches/go/example.com/module@v1.0.0"
+        nested = module / "source"
+        nested.mkdir(parents=True)
+        source = nested / "module.go"
+        source.write_text("read-only module")
+        source.chmod(0o444)
+        nested.chmod(0o555)
+        module.chmod(0o555)
+        self.assertTrue(fleet.maintain_host(self.config)["ok"])
+        self.assertEqual(list((self.root / "caches").iterdir()), [])
+        self.assertEqual((self.root / "evidence/report.json").read_text(), "private proof")
+
+    def test_read_only_cache_cleanup_does_not_chmod_symlink_target(self):
+        evidence = self.root / "evidence"
+        evidence.chmod(0o555)
+        self.addCleanup(evidence.chmod, 0o755)
+        (self.root / "caches/go/report-link").symlink_to(evidence, target_is_directory=True)
+        (self.root / "caches/go").chmod(0o555)
+        fleet.clear_caches(self.config, self.root)
+        self.assertEqual(evidence.stat().st_mode & 0o777, 0o555)
+        self.assertEqual((evidence / "report.json").read_text(), "private proof")
+
     def test_rejects_root_parent_and_symlink_escape(self):
         (self.root / "escape").symlink_to(self.root.parent, target_is_directory=True)
         for path in [".", "../outside", "escape", "escape/child", str(self.root / "caches")]:
