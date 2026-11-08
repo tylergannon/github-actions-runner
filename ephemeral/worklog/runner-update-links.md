@@ -1,0 +1,1 @@
+friction: Weekly cleanup failed on both hosts after GitHub runner self-update replaced bin and externals with symlinks to versioned directories. Permit in-root symlinks only when resolving protected installation references; continue rejecting cleanup symlinks and protected references outside the CI root.
