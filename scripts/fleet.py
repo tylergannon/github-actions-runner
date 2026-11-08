@@ -34,13 +34,13 @@ def gh(endpoint, method="GET", body=None):
     return json.loads(result.stdout) if result.stdout.strip() else None
 
 
-def owned(root, relative):
+def owned(root, relative, *, allow_symlink=False):
     """Reject symlink escapes and whole-root deletions before any mutation."""
     if Path(relative).is_absolute() or ".." in Path(relative).parts:
         raise ValueError(f"expected a path below the CI root: {relative}")
     path = root / relative
     resolved = path.resolve()
-    if resolved == root or root not in resolved.parents or path.is_symlink():
+    if resolved == root or root not in resolved.parents or (path.is_symlink() and not allow_symlink):
         raise ValueError(f"unsafe owned path: {relative}")
     return path
 
@@ -173,7 +173,10 @@ def protect_installations(config, root, path):
             protected.append(str(Path(native["directory"]) / suffix))
     candidate = path.resolve()
     for relative in protected:
-        installation = owned(root, relative).resolve()
+        # Runner self-updates point bin/externals at versioned directories.
+        # Resolve these protected references, while cleanup targets still reject
+        # symlinks and references outside the CI root remain invalid.
+        installation = owned(root, relative, allow_symlink=True).resolve()
         if candidate == installation or candidate in installation.parents or installation in candidate.parents:
             raise ValueError(f"cleanup overlaps installed software or configuration: {path.relative_to(root)} ({relative})")
 

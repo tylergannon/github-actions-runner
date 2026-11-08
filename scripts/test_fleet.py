@@ -80,6 +80,36 @@ class MaintenanceTests(unittest.TestCase):
         self.config["cache_paths"] = ["tools/*"]
         self.assertFalse(fleet.maintain_host(self.config)["ok"])
 
+    def test_cleanup_preserves_runner_update_links_and_their_targets(self):
+        native = self.root / "native/example"
+        for name in ["bin", "externals"]:
+            target = native / (name + ".2.338.2")
+            target.mkdir(parents=True)
+            (target / "installed").write_text("runner software")
+            (native / name).symlink_to(target, target_is_directory=True)
+        self.config["native"] = [{"directory": "native/example"}]
+        fleet.clear_caches(self.config, self.root)
+        self.assertEqual(list((self.root / "caches").iterdir()), [])
+        for name in ["bin", "externals"]:
+            link = native / name
+            self.assertTrue(link.is_symlink())
+            self.assertEqual((link / "installed").read_text(), "runner software")
+            self.config["cache_paths"] = ["native/example/" + name + ".2.338.2"]
+            with self.assertRaisesRegex(ValueError, "installed software"):
+                fleet.clear_caches(self.config, self.root)
+            self.config["cache_paths"] = ["native/example/" + name]
+            with self.assertRaisesRegex(ValueError, "unsafe owned path"):
+                fleet.clear_caches(self.config, self.root)
+
+    def test_protected_runner_link_cannot_escape_ci_root(self):
+        native = self.root / "native/example"
+        native.mkdir(parents=True)
+        (native / "bin").symlink_to(self.root.parent, target_is_directory=True)
+        self.config["native"] = [{"directory": "native/example"}]
+        with self.assertRaisesRegex(ValueError, "unsafe owned path"):
+            fleet.clear_caches(self.config, self.root)
+        self.assertEqual((self.root / "caches/go/object").read_text(), "rebuildable")
+
     def test_image_retention_keeps_configured_worker_and_cleanup_images(self):
         self.config.update(image_retention=[{"repository_prefix": "runner-", "days": 1}],
                            cleanup_image="runner-current:local")
