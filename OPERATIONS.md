@@ -289,3 +289,18 @@ The scheduled task should run maintenance, inspect fleet status and disk space,
 and remain quiet on unchanged healthy state. Report failed cleanup, service
 failure or unexplained growth. Private evidence remains visible storage with its
 own deliberate retention decision; it must never be swept as a disposable cache.
+
+## Systemd service scope
+
+Fleet service entries default to `"scope": "user"`, preserving existing user
+service behavior. For units deployed by the host as system services, set
+`"scope": "system"` on each affected service entry, including native runner
+entries. Status, drain, stop and start then address the system manager.
+Invalid scopes fail before running a service command.
+
+System units belong in host configuration with an explicit unprivileged account
+and appropriate runtime permissions. The operator does not elevate privileges;
+the caller must already have authorization to control the declared system units.
+`install-native` installs user units only and rejects system scope rather than
+silently creating a user unit. Deploy system-scope native units through host
+configuration, retaining their existing command, environment and drain behavior.
