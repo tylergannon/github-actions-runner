@@ -45,9 +45,18 @@ def owned(root, relative, *, allow_symlink=False):
     return path
 
 
+def systemd_scope(config):
+    scope = config.get("scope", "user")
+    if scope not in ("user", "system"):
+        raise ValueError(f"unsupported systemd scope: {scope}")
+    return scope
+
+
 def service(config, action):
     if config["kind"] == "systemd":
-        args = ["systemctl", "--user"]
+        args = ["systemctl"]
+        if systemd_scope(config) == "user":
+            args.append("--user")
         return run(args + [{"status": "is-active"}.get(action, action), config["unit"]], check=action != "status")
     target = f"gui/{os.getuid()}/{config['label']}"
     if action == "status":
@@ -127,6 +136,8 @@ def install_native(config, config_path):
             print(json.dumps({"registered": svc["label"], "owner": "GitHub Actions Runner.app"}), flush=True)
             continue
         if svc["kind"] == "systemd":
+            if systemd_scope(svc) != "user":
+                raise ValueError("install-native only installs user units; deploy system units through host configuration")
             if not svc["unit"].startswith("github-actions-runner-native-"):
                 raise ValueError("native units must use the project prefix")
             path = Path.home() / ".config/systemd/user" / svc["unit"]

@@ -164,5 +164,46 @@ class MaintenanceTests(unittest.TestCase):
         sleep.assert_called_once_with(5)
 
 
+
+
+class SystemdScopeTests(unittest.TestCase):
+    @patch("fleet.run")
+    def test_existing_user_scope_is_preserved(self, run):
+        fleet.service({"kind": "systemd", "unit": "runner.service"}, "start")
+        run.assert_called_once_with(["systemctl", "--user", "start", "runner.service"], check=True)
+
+    @patch("fleet.run")
+    def test_explicit_user_scope(self, run):
+        fleet.service({"kind": "systemd", "scope": "user", "unit": "runner.service"}, "stop")
+        run.assert_called_once_with(["systemctl", "--user", "stop", "runner.service"], check=True)
+
+    @patch("fleet.run")
+    def test_system_scope(self, run):
+        fleet.service({"kind": "systemd", "scope": "system", "unit": "runner.service"}, "stop")
+        run.assert_called_once_with(["systemctl", "stop", "runner.service"], check=True)
+
+    @patch("fleet.run")
+    def test_system_status_can_report_inactive_unit(self, run):
+        fleet.service({"kind": "systemd", "scope": "system", "unit": "runner.service"}, "status")
+        run.assert_called_once_with(["systemctl", "is-active", "runner.service"], check=False)
+
+    @patch("fleet.run")
+    def test_invalid_scope_never_runs_systemctl(self, run):
+        with self.assertRaises(ValueError):
+            fleet.service({"kind": "systemd", "scope": "invalid", "unit": "runner.service"}, "start")
+        run.assert_not_called()
+
+    @patch("fleet.run")
+    def test_native_installer_never_silently_installs_wrong_scope(self, run):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "native").mkdir()
+            config = {"root": directory, "native": [{"name": "probe", "directory": "native", "service": {
+                "kind": "systemd", "scope": "system", "unit": "github-actions-runner-native-probe.service"}}]}
+            with self.assertRaisesRegex(ValueError, "deploy system units"):
+                fleet.install_native(config, root / "host.json")
+        run.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
