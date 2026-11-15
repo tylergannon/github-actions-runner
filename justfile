@@ -2,7 +2,7 @@ root := justfile_directory()
 manager_revision := "60ced08cbc3c6b52f728c87fbdbd225977ce9189"
 
 # Run during provisioning/updates, not inside every job.
-provision-tools cache go_version="1.27.3" node_version="24.22.1":
+provision-tools cache go_version="1.27.4" node_version="24.22.3":
     python3 '{{root}}/scripts/provision-tools.py' --tool-cache '{{cache}}' --go '{{go_version}}' --node '{{node_version}}'
 
 # Build the unchanged upstream manager with a recognizable executable name.

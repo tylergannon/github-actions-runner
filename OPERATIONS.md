@@ -1,6 +1,6 @@
 # Build and configure
 
-Required software persists; ordinary workers may scale to zero. Go 1.27.3 is
+Required software persists; ordinary workers may scale to zero. Go 1.27.4 is
 the current baseline. Use `go-version: stable` in `actions/setup-go` rather than
 `go-version-file`: the latter installs the module's minimum version, even when
 a newer compatible compiler is already installed. A module's `go` line remains
@@ -11,7 +11,7 @@ its compatibility minimum and does not need to change for this runner update.
 Install verified releases in GitHub's tool-cache layout during provisioning:
 
 ```sh
-python3 scripts/provision-tools.py --tool-cache CI_ROOT/tools/actions --go 1.27.3 --node 24.22.1
+python3 scripts/provision-tools.py --tool-cache CI_ROOT/tools/actions --go 1.27.4 --node 24.22.3
 ```
 
 For Linux, bind the `github-actions-runner-tools` volume to that directory and
