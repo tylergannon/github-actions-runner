@@ -19,7 +19,7 @@ remain in the same inventory where their workloads require persistent execution.
 - **Persistent software, on-demand workers.** Keep prepared environments and
   required tools across jobs, restarts and weekly cleanup. Ordinary workers
   scale to zero; the manager stays available to receive jobs.
-- **Current tools.** Use current stable releases. Go 1.27.3 is the current
+- **Current tools.** Use current stable releases. Go 1.27.4 is the current
   migration baseline. Refresh prepared environments during maintenance, rather
   than downloading toolchains in every task. Account for consuming workflows
   that still request an older version before retiring that installation.
